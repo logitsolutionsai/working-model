@@ -1,0 +1,58 @@
+/* Model versus observed: the comparison section of a build --trace page.
+   Ink system: status by weight and shape; the accent marks only the cursor
+   and the controls you touch. */
+.wmr { border-top: 1px solid var(--line); }
+.wmr-title { margin: 6px 0 4px; font: 600 clamp(22px, 3vw, 30px)/1.15 var(--serif); color: var(--ink); }
+.wmr-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 8px 0 4px; font: 600 15px/1.4 var(--sans); color: var(--ink); }
+.wmr-sep { color: var(--faint); font-weight: 400; }
+.wmr-note { margin: 0 0 16px; max-width: 72ch; color: var(--ink-2); }
+.wmr-timeline { margin-bottom: 16px; }
+.wmr-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.wmr-btn { font: 500 13px/1 var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+.wmr-btn:hover { border-color: var(--accent); }
+.wmr-btn:focus-visible, .wmr-svg:focus-visible, .wmr-scrub input:focus-visible, .wmr-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wmr-btn:disabled { color: var(--faint); border-style: dashed; cursor: default; }
+.wmr-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.wmr-scrub { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+.wmr-scrub input { flex: 1 1 auto; min-width: 0; accent-color: var(--accent); }
+.wmr-readout { font: 12px/1 var(--mono); color: var(--ink-2); min-width: 12ch; text-align: right; white-space: nowrap; }
+.wmr-svg { width: 100%; overflow: hidden; border-radius: 6px; }
+.wmr-svg svg { display: block; max-width: 100%; }
+.wmr-lane { font: 600 11px var(--sans); fill: var(--muted); letter-spacing: .02em; }
+.wmr-tick { font: 11px var(--mono); fill: var(--faint); }
+.wmr-axis { stroke: var(--line-strong); stroke-width: 1; }
+.wmr-obs { fill: var(--ink); stroke: var(--ink); stroke-width: 1.5; }
+.wmr-sim { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+.wmr-input { stroke: var(--muted); stroke-width: 1; }
+.wmr-pair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.wmr-cursor { stroke: var(--accent); stroke-width: 1.5; }
+.wmr-chip-l3 { fill: var(--ink); }
+.wmr-chip-text { font: 600 11px var(--sans); fill: var(--bg); }
+.wmr-first-stem { stroke: var(--ink); stroke-width: 1.5; }
+.wmr-first-ring { fill: none; stroke: var(--ink); stroke-width: 2; }
+.wmr-legend { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+.wmr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-bottom: 16px; }
+.wmr-card { min-width: 0; }
+.wmr-h3 { margin: 0 0 10px; font: 600 15px/1.3 var(--sans); color: var(--ink); }
+.wmr-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13.5px; }
+.wmr-dl dt { color: var(--muted); }
+.wmr-dl dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; min-width: 0; }
+.wmr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.wmr-item-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wmr-item-text { margin: 4px 0 0; color: var(--ink-2); font-size: 13.5px; }
+.wmr-status { text-transform: none; }
+.wmr-mono { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.wmr-small { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.wmr-muted { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; }
+.wmr-code { display: block; margin: 0 0 8px; padding: 8px 10px; background: var(--surface-2); border-radius: 6px; font: 12px/1.5 var(--mono); color: var(--ink-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.wmr-details { margin-bottom: 24px; }
+.wmr-details summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.wmr-table-wrap { overflow-x: auto; margin-top: 10px; }
+.wmr-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.wmr-table th, .wmr-table td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.wmr-table th { color: var(--muted); font-weight: 600; }
+.wmr-at td:first-child { width: 40%; }
+@media (max-width: 680px) {
+  .wmr-btn { padding: 8px 10px; }
+}
+.wmr-empty { font: italic 11px var(--sans); fill: var(--muted); }

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-11-14",
+  "note": "Frozen before the Reality Bridge work. Never regenerate to make a test pass.",
+  "examples": {
+    "backoff-jitter": {
+      "check": "sha256:8bf76fd4cb3ab492fe1b6e8d80286fdb04b4da094a2762f2fe8a1cf9502dc5fb",
+      "trace": "sha256:b82a043f31c0dd7a1f99a59ef2dc1098a1e6db49935b15e65c5576d933014f40",
+      "mutation": "sha256:14c5347814a6d3d39459961788de0c1fb6161d46651921df8f378859a01607c4",
+      "mutationScore": 62,
+      "galleryPage": "sha256:bf700dedf1bf5bb5ce5a8997c4c3113f9df56860726c49aafd84a0e3065c1cc9"
+    },
+    "bloom-filter": {
+      "check": "sha256:17c94c55edc8333ac10d48b7839f21b625c2b1a218c6a817bf9b6bcaa20ad7f0",
+      "trace": "sha256:d67e2a81be678088631d0e71a2a9e233aad6fd20f6fb9640c9e3e8747c463373",
+      "mutation": "sha256:df6d895437a24bace15c451db1a36ad6e50f38dfeb42cebf1bcbddac22c9e548",
+      "mutationScore": 76,
+      "galleryPage": "sha256:b19f54a1cd794f5697835a947764f6ddf7ba02bf6c8bbcfc8d47025cc8bdc2e1"
+    },
+    "circuit-breaker": {
+      "check": "sha256:8cdc2dd9f83719ab5aca36f9cda370067d92a13c10e2cd12a595cf928641ded9",
+      "trace": "sha256:738e856540c7815448437d271b05af585e2d023c01363647b20f9c3f38a711d3",
+      "mutation": "sha256:6a5e3d35523b53265a6ec65ac89f7e0296353cf0b15074a9303d3b06a7f066dd",
+      "mutationScore": 92,
+      "galleryPage": "sha256:bdf4b2a1fd3a57ba59a765dc09e593a9e00f607c4bec11f8db261d7921db2f0e"
+    },
+    "compound-interest": {
+      "check": "sha256:e2c5f82490e46b77920f0275f51fadedb6ba0957da749d0fbc51eeb8420fa820",
+      "trace": "sha256:bd034a7e7bd6cbb73c42d4c0a7ac7a35c03568825b5807a2c006785519eb1a51",
+      "mutation": "sha256:ec89b376f58c22750db7faf90529bd6995c5b9965ae517a9c6a5ee5805e7d655",
+      "mutationScore": 94,
+      "galleryPage": "sha256:3e389f92b63e1dd404479ebbe9c5e7370b7f80b7f232e5c3bfd31c8a02f752f9"
+    },
+    "load-balancing": {
+      "check": "sha256:96d490374274f803a0080c9665ef18aa5c1066a711ecaff2309aae23c75b752f",
+      "trace": "sha256:8f7de42b6508b41d084a236c7b462e11c963ccb4b91a587b7bccbee715381bf3",
+      "mutation": "sha256:5100c5084baaef73dbbe0b7a9a35d9381d1b7b5f6f7e6ab9ddc3719e3d118c81",
+      "mutationScore": 92,
+      "galleryPage": "sha256:c6cfbf0c9923e95e73eb9d3b6b8e55f8b477d82718e78e9a6e872b6c5dbd6f3f"
+    },
+    "lru-cache": {
+      "check": "sha256:08408e1e07d55d5db707aace0beedcab16b59e4163614a91d284237db3ba5aa3",
+      "trace": "sha256:6da5ea181ce323a668f193cfe1479422a3fd8cc92e4e646f748dffa9b4fe05f4",
+      "mutation": "sha256:b0c4bc4ab96412cfc396b34f27ea5312d42aa5910f8122cda232be81ea19c1f4",
+      "mutationScore": 100,
+      "galleryPage": "sha256:a8f343cbda7dac52667a8e45effb79fd1f3b4e02a6d3555bd680ec2b2818383d"
+    },
+    "raft-election": {
+      "check": "sha256:5a2b877138de4e13c3feaa462187e9aec56c296c71238acb02e4aca98230622a",
+      "trace": "sha256:164c248de36c3b754a67f64977ba4d66e40876f1b4aef19e2e32f9290c5179e2",
+      "mutation": "sha256:e20025a88d3affb1bccf83d57bb7b5529cacd3d894f330ea905a054a4f31333f",
+      "mutationScore": 70,
+      "galleryPage": "sha256:0a79c4fb8dee0d3ccfbde89b76ff55ec80def907b4e06fa87349069a93707159"
+    },
+    "reorder-point": {
+      "check": "sha256:c548d0a464118b958f233ce3d6f1c2c7a92a637257b8342111fe5ce124bd8800",
+      "trace": "sha256:15a0460fe983ec981e0775dca3173a4186f4dbf6e13446ef7578cf7fba4d266f",
+      "mutation": "sha256:e3f90140fd698ffc3bb7de318653d7193bfcb2e8209bc6a87512b163e189a210",
+      "mutationScore": 92,
+      "galleryPage": "sha256:29d6f77560ab0768ceb6f46bbf6038a0f88dffeb7d9d6325682bf67bff0c4706"
+    },
+    "sir-epidemic": {
+      "check": "sha256:17fc2cb17ee7fc6e805e762dc1503a1141aa25906a5c0f3e26e01b6d9897b301",
+      "trace": "sha256:cc08a57d13c70015e416d08953c143ab73079682f7ffdca06b6dd22466798f62",
+      "mutation": "sha256:3f659ba2ffb648c4b46de8071ac61dc95814840f4661206130e8e6069630669a",
+      "mutationScore": 86,
+      "galleryPage": "sha256:3628f88503cc5264b641af14faa39ec81b81d7df8385b4b5b7b3a4715729d92d"
+    },
+    "tcp-aimd": {
+      "check": "sha256:0291696df7fd37a27da61c5284fc780208616412be906355564ba5cc5fa7fcf5",
+      "trace": "sha256:21df27f457e43ad4afa06bfdcdbe232072e0b16e94124e15b4569fdfafae1651",
+      "mutation": "sha256:426014a7b7b375c76a3007bc13846e35a5a2070e7e40f1089ced4686f83192ab",
+      "mutationScore": 82,
+      "galleryPage": "sha256:251d4c2cae81012e90d37172e3caa33c9f66e10379eab3cce308ee5fad425ddb"
+    },
+    "token-bucket": {
+      "check": "sha256:45bafcf2f2cde7355dd8461c938ebf5f6f5b563896dc6ff1b788188985e63014",
+      "trace": "sha256:4ef7d2e4bd978fee48ada597622eb9df0b78f055d9d7b55b4e38035e94eba205",
+      "mutation": "sha256:b8f4659e8592001fb77f03ee46a3191c5348b5b6e4ec219cb07a2e3ddb42465e",
+      "mutationScore": 94,
+      "galleryPage": "sha256:901ed0a9fe2626d9d2d90ab9cbbf6c3a5e273f8d1a9e180aa35b7d3147cd794b"
+    }
+  }
+}

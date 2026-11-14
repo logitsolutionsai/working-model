@@ -1,0 +1,66 @@
+{
+  "$schema": "../../schema/trace-map.schema.json",
+  "schemaVersion": 1,
+  "note": "Maps the synthetic payments trace onto circuit-breaker.model.json and circuit-breaker-window.model.json.",
+  "modelTimeUnit": "s",
+  "timeOrigin": "zero",
+  "timeQuantization": "nearest-tick",
+  "replayMode": "replace-inputs",
+  "keepAttrs": [
+    "route"
+  ],
+  "inputs": [
+    {
+      "observedKind": "call_failed",
+      "modelEvent": "failure",
+      "subjectFrom": "subject"
+    },
+    {
+      "observedKind": "call_succeeded",
+      "modelEvent": "success",
+      "subjectFrom": "subject"
+    }
+  ],
+  "outputs": [
+    {
+      "modelEmit": "trip",
+      "observedKind": "breaker_opened",
+      "modelSubjectFrom": "literal:payments",
+      "observedSubjectFrom": "subject",
+      "withinMs": 50
+    },
+    {
+      "modelEmit": "close",
+      "observedKind": "breaker_closed",
+      "modelSubjectFrom": "literal:payments",
+      "observedSubjectFrom": "subject",
+      "withinMs": 50
+    }
+  ],
+  "assertions": [
+    {
+      "id": "opens-when-observed",
+      "kind": "event-correspondence",
+      "modelEmit": "trip",
+      "minPrecision": 1,
+      "minRecall": 1,
+      "text": "The breaker opens in the trace exactly when the model opens it."
+    },
+    {
+      "id": "closes-when-observed",
+      "kind": "event-correspondence",
+      "modelEmit": "close",
+      "minPrecision": 1,
+      "minRecall": 1,
+      "text": "The breaker closes in the trace exactly when the model closes it."
+    },
+    {
+      "id": "no-rejection-before-open",
+      "kind": "event-order",
+      "first": "breaker_opened",
+      "then": "call_rejected",
+      "by": "literal:payments",
+      "text": "No call is rejected before the breaker has opened at least once."
+    }
+  ]
+}

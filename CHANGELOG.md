@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+Reality Bridge: compare a model with an observed trace. Additive; without a trace nothing changes, and `tests/baseline.test.mjs` checks that every existing example keeps a byte-identical check report, default run, mutation report and gallery page (frozen before this work in `tests/fixtures/baseline/golden.json`).
+
+- `trace import`: generic JSONL and an OTLP JSON subset (spans and span events with a configured kind attribute; span names are never read as events) into a canonical normalized trace. Stable ids, sorting by time then record order, absolute times only with a declared origin, attribute allowlist from the mapping, 5 MiB and 50,000 events by default (100 MiB and 500,000 at most), and a completeness tri-state: `unknown` (default), `declared-complete` (`--complete`), `known-incomplete` (truncated).
+- `trace-map.json`: inputs, outputs and assertions with fixed selectors only (`subject`, `attrs.<key>`, `literal:<text>`, `event.<key>`, `payload`, `payload[n]`, `payloadIsSeqOf`), validated against the model's events and emits.
+- `check --trace`: integer-tick replay in `replace-inputs` mode (every other model event must be declared internal), proven equal to the engine's own loop on every example; one-to-one matching per subject in one pass; assertions `event-correspondence`, `event-order`, `response-before` and `never-observed` returning pass, fail or inconclusive with evidence event ids; `reality-report.json` with digests, coverage, the first mismatch and the reproduce command; `--strict-observed`.
+- The optional `reality` spec block (default mapping and trace, assumptions, source references) with paths confined to the spec's folder.
+- `fuzz` and `minimize`: seeded cases over sliders, the model seed and events a `fuzz` block marks fuzzable; per-claim coverage, `W_VACUOUS_CLAIM`, `W_NEVER_FAILED_IN_FUZZ` and limit hits reported as inconclusive; byte-identical counterexample files; deterministic shrinking that keeps the same failing claim within a budget.
+- `build --trace`: the page plus a Model Versus Observed Trace section (two-lane timeline, first mismatch, state at the cursor beside "not observed", assertions, coverage, assumptions, data table) that re-runs the comparison with the same modules and shows whether it equals the command line.
+- `bundle --public`: an allowlisted projection (kinds, relative time buckets, counts, assumptions, digests) with a key preview; refuses an observed trace without `--synthetic` or `--acknowledge-privacy`.
+- `ci`: claims, mutation, fuzz, trace assertions and browser parity from `.working-model-ci.json`, as Markdown, JSON and JUnit XML, with changes against a base report; `.github/workflows/working-model-ci.example.yml` is a read-only starter.
+- New exit code 3 for missing files, limits and an unavailable browser in the new commands; errors with `--json` print `{ code, message, location, fix }`.
+- Synthetic demo `examples/reality-bridge/` and docs: `docs/REALITY-BRIDGE.md`, `docs/FUZZ.md`, `docs/CI.md`, `docs/TRACE-SECURITY.md`, `docs/CONFORMANCE-LIMITS.md`.
+
 - The page uses the Ink palette: warm neutrals, one accent (`#0065FD`, `#5b9cff` in dark mode) only for what the reader touches or has selected, and status shown by weight and shape instead of red, green and yellow. The header reads "6 of 6 claims hold", with an inverse "1 fails" chip when a claim fails; the tilted stamp is gone.
 - Rejected particles are hollow ink rings and accepted ones solid ink, with no glows or trails; chart series are told apart by dash pattern and named at the line end.
 - Motion uses interruptible springs (`src/page/fluid.js`): press feedback on pointer-down, a chip that materialises when a claim flips, a counterexample well that opens on a height spring, a slider thumb that scales while pressed, and a timeline scrubber with pointer capture, grab offset and a rubber band past both ends. Everything is instant under reduced motion.

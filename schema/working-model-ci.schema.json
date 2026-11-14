@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logitsolutionsai/working-model/schema/working-model-ci.schema.json",
+  "title": "working-model explanation CI config (.working-model-ci.json)",
+  "description": "See docs/CI.md. The command line validates the same rules in code (src/node/ci-cli.mjs).",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "note": {
+      "type": "string"
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "claims": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "mutation": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minScore": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "fuzz": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "cases": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            },
+            "seed": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "strict": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "reality": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "strictObserved": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "parity": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "json": {
+          "type": "string"
+        },
+        "markdown": {
+          "type": "string"
+        },
+        "junit": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion"
+  ],
+  "additionalProperties": false
+}

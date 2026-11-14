@@ -65,6 +65,25 @@ A part touches four places:
 
 The engine (`src/engine/`) must stay free of dependencies and of Node or browser APIs, because it is inlined into every page. Import lines must fit on one line, and top-level names must be unique across modules; the bundler checks both. Add tests for any new function, statement or claim behaviour, and keep error codes stable: they are part of the interface.
 
+## Changing The Reality Bridge
+
+The trace, fuzz, bundle and CI code lives in `src/trace/`, `src/fuzz/`, `src/evidence/`, `src/ci/` and the `src/node/*-cli.mjs` files. It must not change the engine files that every page inlines (`ENGINE_FILES` in `src/node/build.mjs`), `runtime.js`, `fluid.js` or `page.css`: `tests/baseline.test.mjs` compares every example's check report, default run, mutation report and gallery page with values frozen before the Reality Bridge existed. Never regenerate `tests/fixtures/baseline/golden.json` to make that test pass. Keep the pure modules free of Node and browser APIs; `build --trace` bundles them into the page.
+
+## Model Pull Request Review
+
+A pull request that adds or changes a model, a mapping or a trace should say:
+
+- **Sources** for the mechanism facts, and which `sourceRefs` are background only.
+- **Assumptions**, in the spec's `reality.assumptions`, kept apart from the claims.
+- **Claims**: the list, the `check` line and which slider breaks which claim.
+- **Mutation**: the `check --mutate` score and every surviving mutant you did not fix, with the reason.
+- **Fuzz**: the seed and case count, and the minimized counterexample if one was found.
+- **Observed trace**: its origin (synthetic or real, never a real production trace in this repository), its declared completeness and why.
+- **Counterexample**: the first mismatch and its event ids, if any.
+- **Limitations**: what the evidence does not establish.
+
+Suggested labels: `new-algorithm`, `adversarial-counterexample`, `otel-mapping`, `accessibility`.
+
 ## Style
 
 - Plain JavaScript modules, no build step.

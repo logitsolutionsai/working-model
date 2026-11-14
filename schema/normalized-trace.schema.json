@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logitsolutionsai/working-model/schema/normalized-trace.schema.json",
+  "title": "working-model normalized trace",
+  "description": "Written by trace import. check --trace validates the same rules in code (src/trace/normalize.mjs).",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "working-model-trace"
+    },
+    "timeBase": {
+      "const": "relative-ms"
+    },
+    "origin": {
+      "type": "object"
+    },
+    "completeness": {
+      "enum": [
+        "unknown",
+        "declared-complete",
+        "known-incomplete"
+      ]
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,64}$"
+          },
+          "timeMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string"
+          },
+          "attrs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "timeMs",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "stats": {
+      "type": "object"
+    },
+    "warnings": {
+      "type": "array"
+    },
+    "private": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "kind",
+    "timeBase",
+    "completeness",
+    "events"
+  ],
+  "additionalProperties": false
+}

@@ -11,3 +11,10 @@ Thumbs.db
 
 # screenshots that `layout` writes next to a spec
 working-model-shots/
+
+# launch videos made with /brag (kept out of the repo)
+brag-output*/
+
+# Reality Bridge output written by trace import and check --trace
+.working-model/
+artifacts/

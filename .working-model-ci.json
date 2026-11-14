@@ -1,0 +1,35 @@
+{
+  "$schema": "schema/working-model-ci.schema.json",
+  "schemaVersion": 1,
+  "note": "Explanation CI for the Reality Bridge demo. Thresholds are explicit; change them only on purpose.",
+  "models": [
+    "examples/reality-bridge/*.model.json"
+  ],
+  "checks": {
+    "claims": {
+      "required": true
+    },
+    "mutation": {
+      "enabled": true,
+      "minScore": 50
+    },
+    "fuzz": {
+      "enabled": true,
+      "cases": 250,
+      "seed": 7,
+      "strict": false
+    },
+    "reality": {
+      "enabled": true,
+      "strictObserved": false
+    },
+    "parity": {
+      "enabled": true
+    }
+  },
+  "output": {
+    "json": "artifacts/working-model-ci.json",
+    "markdown": "artifacts/working-model-ci.md",
+    "junit": "artifacts/working-model-ci.junit.xml"
+  }
+}

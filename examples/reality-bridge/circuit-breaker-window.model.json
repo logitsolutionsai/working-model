@@ -1,0 +1,311 @@
+{
+  "$schema": "../../schema/model.schema.json",
+  "id": "reality-circuit-breaker-window",
+  "title": "Circuit Breaker That Counts Failures In A Window",
+  "summary": "The same client and payments service, with the assumption the trace contradicted replaced: this breaker opens when {minFailures} of the last {window} calls failed, even if no two failures are in a row. After a cooldown of {cooldown} seconds one trial call decides whether it closes.",
+  "sources": [
+    {
+      "title": "Martin Fowler, CircuitBreaker (2014)",
+      "url": "https://martinfowler.com/bliki/CircuitBreaker.html"
+    },
+    {
+      "title": "Synthetic trace made by make-trace.mjs in this folder",
+      "note": "no real system was observed"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.05,
+  "duration": 20,
+  "seed": 1,
+  "params": [
+    {
+      "id": "window",
+      "label": "Calls in the window",
+      "min": 4,
+      "max": 20,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "id": "minFailures",
+      "label": "Failures in the window to trip",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "id": "cooldown",
+      "label": "Cooldown",
+      "min": 1,
+      "max": 8,
+      "step": 0.5,
+      "default": 4,
+      "unit": "s"
+    }
+  ],
+  "events": [
+    {
+      "name": "failure",
+      "label": "call failed",
+      "every": 0.4,
+      "from": 0.2,
+      "until": 4.7
+    },
+    {
+      "name": "failure",
+      "label": "call failed",
+      "every": 0.2,
+      "from": 5,
+      "until": 8.9
+    },
+    {
+      "name": "success",
+      "label": "call succeeded",
+      "every": 0.4,
+      "from": 0.4,
+      "until": 4.9
+    },
+    {
+      "name": "success",
+      "label": "call succeeded",
+      "every": 0.2,
+      "from": 9,
+      "until": 20
+    }
+  ],
+  "state": {
+    "mode": "'closed'",
+    "recent": [],
+    "openedAt": -100,
+    "failures": 0,
+    "trips": 0,
+    "closes": 0,
+    "skipped": 0
+  },
+  "rules": {
+    "on": {
+      "failure": [
+        "if mode == 'open' and t - openedAt >= cooldown { mode = 'half-open' }",
+        "if mode == 'open' {",
+        "  skipped += 1",
+        "} else {",
+        "  failures += 1",
+        "  if mode == 'half-open' {",
+        "    mode = 'open'",
+        "    openedAt = t",
+        "    trips += 1",
+        "    emit('trip')",
+        "  } else {",
+        "    push(recent, 1)",
+        "    if len(recent) > window { shift(recent) }",
+        "    if sum(recent) >= minFailures {",
+        "      mode = 'open'",
+        "      openedAt = t",
+        "      trips += 1",
+        "      recent = []",
+        "      emit('trip')",
+        "    }",
+        "  }",
+        "}"
+      ],
+      "success": [
+        "if mode == 'open' and t - openedAt >= cooldown { mode = 'half-open' }",
+        "if mode == 'open' {",
+        "  skipped += 1",
+        "} else {",
+        "  if mode == 'half-open' {",
+        "    mode = 'closed'",
+        "    closes += 1",
+        "    recent = []",
+        "    emit('close')",
+        "  } else {",
+        "    push(recent, 0)",
+        "    if len(recent) > window { shift(recent) }",
+        "  }",
+        "}"
+      ]
+    }
+  },
+  "layout": {
+    "cols": 12,
+    "rows": 8
+  },
+  "parts": [
+    {
+      "id": "breaker",
+      "type": "node",
+      "at": [
+        0,
+        0,
+        4,
+        2
+      ],
+      "label": "Breaker",
+      "state": "mode",
+      "states": [
+        {
+          "id": "closed",
+          "label": "closed",
+          "tone": "ok"
+        },
+        {
+          "id": "open",
+          "label": "open",
+          "tone": "bad"
+        },
+        {
+          "id": "half-open",
+          "label": "half-open",
+          "tone": "warn"
+        }
+      ],
+      "pulse": [
+        "trip",
+        "close"
+      ]
+    },
+    {
+      "id": "window-count",
+      "type": "counter",
+      "at": [
+        4,
+        0,
+        4,
+        2
+      ],
+      "label": "Failures in the window",
+      "value": "inWindow"
+    },
+    {
+      "id": "trip-count",
+      "type": "counter",
+      "at": [
+        8,
+        0,
+        4,
+        2
+      ],
+      "label": "Times opened",
+      "value": "trips",
+      "tone": "warn"
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [
+        0,
+        2,
+        12,
+        6
+      ],
+      "label": "Failures in the window",
+      "series": [
+        {
+          "expr": "inWindow",
+          "label": "failures",
+          "tone": "bad"
+        }
+      ],
+      "refs": [
+        {
+          "y": "minFailures",
+          "label": "trip threshold",
+          "tone": "bad"
+        }
+      ],
+      "y": [
+        0,
+        "minFailures + 1"
+      ],
+      "step": true
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 5,
+      "text": "Every other call fails. No two failures are in a row, but {minFailures} of the last {window} calls fail, so the breaker opens early.",
+      "cites": [
+        "scattered-trips",
+        "window-bounded"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 12,
+      "text": "While it is open, calls are rejected without reaching the service. After {cooldown} seconds one trial call goes through; during the outage it fails and the breaker opens again.",
+      "cites": [
+        "reopens-in-outage"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 20,
+      "text": "The service is back. The next trial call succeeds and the breaker closes.",
+      "cites": [
+        "closes-after-recovery"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "scattered-trips",
+      "kind": "eventually",
+      "by": 4.9,
+      "expr": "trips >= 1",
+      "text": "Scattered failures trip it: once {minFailures} of the last {window} calls failed, the breaker opens before the outage starts."
+    },
+    {
+      "id": "reopens-in-outage",
+      "kind": "whenever",
+      "event": "trip",
+      "expr": "mode == 'open' and openedAt == t",
+      "text": "Every trip leaves the breaker open, starting its cooldown at that moment."
+    },
+    {
+      "id": "window-bounded",
+      "kind": "always",
+      "expr": "len(recent) <= window",
+      "text": "The breaker remembers at most {window} recent calls."
+    },
+    {
+      "id": "closes-after-recovery",
+      "kind": "at",
+      "t": 20,
+      "expr": "mode == 'closed' and closes >= 1",
+      "text": "After the service recovers, a trial call succeeds and the breaker ends closed."
+    }
+  ],
+  "reality": {
+    "mapping": "trace-map.json",
+    "observedTrace": "observed.normalized.json",
+    "assumptions": [
+      {
+        "id": "counts-in-a-window",
+        "text": "The production breaker opens when enough of the most recent calls failed, in a row or not. This replaces the assumption the trace contradicted.",
+        "scope": "model"
+      },
+      {
+        "id": "trace-is-synthetic",
+        "text": "The observed trace is synthetic and declared complete: it records every call outcome and every breaker transition.",
+        "scope": "trace-only"
+      },
+      {
+        "id": "outcomes-drive-breaker",
+        "text": "Each call outcome in the trace is one input to the breaker; rejected calls never reach the service.",
+        "scope": "mapping"
+      }
+    ],
+    "sourceRefs": [
+      {
+        "title": "Martin Fowler, CircuitBreaker (2014)",
+        "url": "https://martinfowler.com/bliki/CircuitBreaker.html",
+        "kind": "background"
+      }
+    ]
+  },
+  "derived": {
+    "inWindow": "sum(recent)"
+  }
+}

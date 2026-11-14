@@ -1,0 +1,307 @@
+{
+  "$schema": "../../schema/model.schema.json",
+  "id": "reality-circuit-breaker",
+  "title": "Circuit Breaker That Counts Failures In A Row",
+  "summary": "A client calls a payments service through a circuit breaker. This model assumes the breaker counts failures in a row: after {threshold} in a row it opens, and after a cooldown of {cooldown} seconds one trial call decides whether it closes. Scattered failures never trip it. The synthetic trace next to this file says otherwise.",
+  "sources": [
+    {
+      "title": "Martin Fowler, CircuitBreaker (2014)",
+      "url": "https://martinfowler.com/bliki/CircuitBreaker.html"
+    },
+    {
+      "title": "Synthetic trace made by make-trace.mjs in this folder",
+      "note": "no real system was observed"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.05,
+  "duration": 20,
+  "seed": 1,
+  "params": [
+    {
+      "id": "threshold",
+      "label": "Failures in a row to trip",
+      "min": 2,
+      "max": 14,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "id": "cooldown",
+      "label": "Cooldown",
+      "min": 1,
+      "max": 8,
+      "step": 0.5,
+      "default": 4,
+      "unit": "s"
+    }
+  ],
+  "events": [
+    {
+      "name": "failure",
+      "label": "call failed",
+      "every": 0.4,
+      "from": 0.2,
+      "until": 4.7
+    },
+    {
+      "name": "failure",
+      "label": "call failed",
+      "every": 0.2,
+      "from": 5,
+      "until": 8.9
+    },
+    {
+      "name": "success",
+      "label": "call succeeded",
+      "every": 0.4,
+      "from": 0.4,
+      "until": 4.9
+    },
+    {
+      "name": "success",
+      "label": "call succeeded",
+      "every": 0.2,
+      "from": 9,
+      "until": 20
+    }
+  ],
+  "state": {
+    "mode": "'closed'",
+    "streak": 0,
+    "openedAt": -100,
+    "failures": 0,
+    "trips": 0,
+    "closes": 0,
+    "skipped": 0
+  },
+  "rules": {
+    "on": {
+      "failure": [
+        "if mode == 'open' and t - openedAt >= cooldown { mode = 'half-open' }",
+        "if mode == 'open' {",
+        "  skipped += 1",
+        "} else {",
+        "  failures += 1",
+        "  streak += 1",
+        "  if mode == 'half-open' or streak >= threshold {",
+        "    mode = 'open'",
+        "    openedAt = t",
+        "    trips += 1",
+        "    emit('trip')",
+        "  }",
+        "}"
+      ],
+      "success": [
+        "if mode == 'open' and t - openedAt >= cooldown { mode = 'half-open' }",
+        "if mode == 'open' {",
+        "  skipped += 1",
+        "} else {",
+        "  streak = 0",
+        "  if mode == 'half-open' {",
+        "    mode = 'closed'",
+        "    closes += 1",
+        "    emit('close')",
+        "  }",
+        "}"
+      ]
+    }
+  },
+  "layout": {
+    "cols": 12,
+    "rows": 8
+  },
+  "parts": [
+    {
+      "id": "breaker",
+      "type": "node",
+      "at": [
+        0,
+        0,
+        4,
+        2
+      ],
+      "label": "Breaker",
+      "state": "mode",
+      "states": [
+        {
+          "id": "closed",
+          "label": "closed",
+          "tone": "ok"
+        },
+        {
+          "id": "open",
+          "label": "open",
+          "tone": "bad"
+        },
+        {
+          "id": "half-open",
+          "label": "half-open",
+          "tone": "warn"
+        }
+      ],
+      "pulse": [
+        "trip",
+        "close"
+      ]
+    },
+    {
+      "id": "streak-count",
+      "type": "counter",
+      "at": [
+        4,
+        0,
+        4,
+        2
+      ],
+      "label": "Failures in a row",
+      "value": "streak"
+    },
+    {
+      "id": "trip-count",
+      "type": "counter",
+      "at": [
+        8,
+        0,
+        4,
+        2
+      ],
+      "label": "Times opened",
+      "value": "trips",
+      "tone": "warn"
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [
+        0,
+        2,
+        12,
+        6
+      ],
+      "label": "Failures in a row",
+      "series": [
+        {
+          "expr": "streak",
+          "label": "streak",
+          "tone": "bad"
+        }
+      ],
+      "refs": [
+        {
+          "y": "threshold",
+          "label": "trip threshold",
+          "tone": "bad"
+        }
+      ],
+      "y": [
+        0,
+        "threshold + 1"
+      ],
+      "step": true
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 5,
+      "text": "Every other call fails, but never two in a row, so the streak falls back to zero and the breaker stays closed.",
+      "cites": [
+        "ignores-scattered"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 9,
+      "text": "The service fails every call. After {threshold} failures in a row the breaker opens.",
+      "cites": [
+        "opens-in-outage",
+        "only-trips-in-outage"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 20,
+      "text": "The service is back. The first trial call after the cooldown succeeds and the breaker closes.",
+      "cites": [
+        "closes-after-recovery"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "ignores-scattered",
+      "kind": "at",
+      "t": 4.9,
+      "expr": "trips == 0 and failures >= threshold",
+      "text": "Scattered failures never trip it: {threshold} or more calls fail before the outage, never two in a row, and the breaker stays closed."
+    },
+    {
+      "id": "opens-in-outage",
+      "kind": "eventually",
+      "by": "5 + threshold * 0.2",
+      "expr": "mode == 'open'",
+      "text": "Once every call fails, the breaker opens after {threshold} failures in a row."
+    },
+    {
+      "id": "only-trips-in-outage",
+      "kind": "whenever",
+      "event": "trip",
+      "expr": "t >= 5",
+      "text": "It only ever opens during the outage."
+    },
+    {
+      "id": "closes-after-recovery",
+      "kind": "at",
+      "t": 20,
+      "expr": "mode == 'closed' and closes >= 1",
+      "text": "After the service recovers, a trial call succeeds and the breaker ends closed."
+    }
+  ],
+  "reality": {
+    "mapping": "trace-map.json",
+    "observedTrace": "observed.normalized.json",
+    "assumptions": [
+      {
+        "id": "counts-in-a-row",
+        "text": "The production breaker counts failures in a row, not failures over a window of recent calls.",
+        "scope": "model"
+      },
+      {
+        "id": "trace-is-synthetic",
+        "text": "The observed trace is synthetic and declared complete: it records every call outcome and every breaker transition.",
+        "scope": "trace-only"
+      },
+      {
+        "id": "outcomes-drive-breaker",
+        "text": "Each call outcome in the trace is one input to the breaker; rejected calls never reach the service.",
+        "scope": "mapping"
+      }
+    ],
+    "sourceRefs": [
+      {
+        "title": "Martin Fowler, CircuitBreaker (2014)",
+        "url": "https://martinfowler.com/bliki/CircuitBreaker.html",
+        "kind": "background"
+      }
+    ]
+  },
+  "fuzz": {
+    "events": {
+      "failure": {
+        "fuzzable": true,
+        "shift": 0.2,
+        "count": [
+          1,
+          6
+        ],
+        "omit": true
+      },
+      "success": {
+        "fuzzable": true,
+        "shift": 0.2,
+        "omit": true
+      }
+    }
+  }
+}

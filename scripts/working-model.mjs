@@ -29,26 +29,44 @@ Usage:
                      [--drag name=a..b@s0..s1] [--set name=value] [--clip ...] [--max-mb 3]
   working-model schema [-o schema/model.schema.json]
 
+Reality Bridge (model versus an observed trace):
+  working-model trace import <trace.jsonl|otlp.json> [--mapping trace-map.json] [--out trace.normalized.json]
+                     [--complete] [--strict] [--origin first-event|<ISO time>] [--keep-attr key]
+                     [--max-events 50000] [--max-bytes 5242880] [--format jsonl|otlp] [--json]
+  working-model check <spec> --trace <trace.normalized.json> [--mapping trace-map.json]
+                     [--report .working-model/reality-report.json] [--strict-observed] [--json]
+  working-model build <spec> --trace <trace.normalized.json> [--mapping trace-map.json] [-o page.reality.html] [--force]
+  working-model fuzz <spec> [--cases 100] [--seed 1] [--out .working-model/fuzz] [--strict] [--unsafe-large] [--json]
+  working-model fuzz <spec> --case first-failure.json      (re-run one saved case)
+  working-model bundle <spec> --public (--case minimized.json | --trace t.json --mapping m.json --synthetic|--acknowledge-privacy)
+                     [--out .working-model/evidence] [--preview] [--json]
+  working-model ci <dir|spec> [--config .working-model-ci.json] [--format markdown|json|junit] [--base base-report.json]
+  working-model minimize <spec> --case first-failure.json [--out minimized.json] [--shrink-budget 200] [--json]
+
 Exit codes: 0 all claims pass, 1 a claim or lint error fails, 2 the spec is invalid, 64 usage.
+Reality Bridge commands add 1 for a failed observed assertion (or an inconclusive one with --strict-observed),
+2 for an invalid trace or mapping, and 3 when a file, limit or browser is not available.
 --mutate breaks the rules on purpose, one small change per mutant, and reports which claims notice.
 --mutate-strict also exits 1 when a claim never fails or the score is below --min-score (percent).
 Chrome: layout, snap and gif use an installed Chrome, Edge or Chromium (set WORKING_MODEL_CHROME to choose).`;
 
 function parseArgs(argv) {
-  const out = { _: [], set: [], drag: [] };
+  const out = { _: [], set: [], drag: [], keepAttr: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-o' || a === '--out' || a === '--output') out.out = argv[++i];
     else if (a === '--set') out.set.push(argv[++i]);
     else if (a === '--drag') out.drag.push(argv[++i]);
+    else if (a === '--keep-attr') out.keepAttr.push(argv[++i]);
     else if (a.startsWith('--') && a.includes('=')) {
       const eq = a.indexOf('=');
       out[a.slice(2, eq).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = a.slice(eq + 1);
     } else if (a.startsWith('--')) {
       const key = a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
       const next = argv[i + 1];
-      if (['json', 'strict', 'force', 'thumbs', 'noProbe', 'noColor', 'help', 'version', 'full', 'mutate', 'mutateStrict'].includes(key)) out[key] = true;
-      else if (next != null && !next.startsWith('--')) { out[key] = next; i++; } else out[key] = true;
+      if (['json', 'strict', 'force', 'thumbs', 'noProbe', 'noColor', 'help', 'version', 'full', 'mutate', 'mutateStrict', 'complete', 'strictObserved', 'public', 'synthetic', 'acknowledgePrivacy', 'unsafeLarge', 'preview'].includes(key)) out[key] = true;
+      // --trace may stand alone (the spec's reality block names the trace), so a following -o is not its value
+      else if (next != null && !next.startsWith('--') && !(key === 'trace' && next.startsWith('-'))) { out[key] = next; i++; } else out[key] = true;
     } else out._.push(a);
   }
   return out;
@@ -96,7 +114,31 @@ async function main() {
   const c = color(!args.json && !args.noColor && !process.env.NO_COLOR && process.stdout.isTTY);
 
   switch (cmd) {
+    case 'fuzz': {
+      const { fuzzCommand } = await import('../src/node/fuzz-cli.mjs');
+      return fuzzCommand(args, c);
+    }
+    case 'minimize': {
+      const { minimizeCommand } = await import('../src/node/fuzz-cli.mjs');
+      return minimizeCommand(args, c);
+    }
+    case 'ci': {
+      const { ciCommand } = await import('../src/node/ci-cli.mjs');
+      return ciCommand(args, c);
+    }
+    case 'bundle': {
+      const { bundleCommand } = await import('../src/node/bundle-cli.mjs');
+      return bundleCommand(args, c);
+    }
+    case 'trace': {
+      const { traceCommand } = await import('../src/node/reality-cli.mjs');
+      return traceCommand(args, c);
+    }
     case 'check': {
+      if (args.trace) {
+        const { checkTraceCommand } = await import('../src/node/reality-cli.mjs');
+        return checkTraceCommand(args, c, parseSetMap(args.set));
+      }
       const target = args._[1];
       if (!target) usage('check needs a spec file or a folder');
       if (!fs.existsSync(target)) usage(`no such file: ${target}`);
@@ -128,6 +170,10 @@ async function main() {
       return exit;
     }
     case 'build': {
+      if (args.trace) {
+        const { buildTraceCommand } = await import('../src/node/reality-cli.mjs');
+        return buildTraceCommand(args, c, VERSION);
+      }
       const file = args._[1];
       if (!file) usage('build needs a spec file');
       const r = checkFile(file, { probe: false, mutate: mutateOptions(args) });

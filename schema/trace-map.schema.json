@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logitsolutionsai/working-model/schema/trace-map.schema.json",
+  "title": "working-model trace mapping (trace-map.json)",
+  "description": "For editors. The command line validates the same rules in code (src/trace/mapping.mjs), including names against the model; see docs/REALITY-BRIDGE.md.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "note": {
+      "type": "string"
+    },
+    "modelTimeUnit": {
+      "enum": [
+        "ms",
+        "s",
+        "min",
+        "h",
+        "d"
+      ]
+    },
+    "msPerModelUnit": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "timeOrigin": {
+      "enum": [
+        "first-input",
+        "zero"
+      ]
+    },
+    "timeQuantization": {
+      "const": "nearest-tick"
+    },
+    "quantizationToleranceMs": {
+      "type": "number",
+      "minimum": 0
+    },
+    "replayMode": {
+      "const": "replace-inputs"
+    },
+    "internalEvents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowUnknownObserved": {
+      "type": "boolean"
+    },
+    "keepAttrs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "observedKind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelEvent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subjectFrom": {
+            "type": "string",
+            "description": "\"subject\", \"attrs.<key>\" or \"literal:<text>\""
+          },
+          "modelPayloadKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+          },
+          "when": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "observedKind",
+          "modelEvent"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "modelEmit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "observedKind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelSubjectFrom": {
+            "type": "string",
+            "description": "\"event.<key>\", \"payload\", \"payload[n]\" or \"literal:<text>\""
+          },
+          "observedSubjectFrom": {
+            "type": "string",
+            "description": "\"subject\", \"attrs.<key>\" or \"literal:<text>\""
+          },
+          "withinMs": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3600000
+          },
+          "payloadIsSeqOf": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "modelEmit",
+          "observedKind"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+          },
+          "kind": {
+            "enum": [
+              "event-correspondence",
+              "event-order",
+              "response-before",
+              "never-observed"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "modelEmit": {
+            "type": "string"
+          },
+          "minPrecision": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minRecall": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "first": {
+            "type": "string"
+          },
+          "then": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          },
+          "request": {
+            "type": "string"
+          },
+          "response": {
+            "type": "string"
+          },
+          "withinMs": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3600000
+          },
+          "observedKind": {
+            "type": "string"
+          },
+          "when": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "inputs"
+  ],
+  "additionalProperties": false
+}

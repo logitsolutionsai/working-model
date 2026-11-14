@@ -297,6 +297,57 @@ export function buildSchema() {
         },
         additionalProperties: false,
       },
+      reality: {
+        type: 'object',
+        description: 'Optional Reality Bridge settings: the default mapping and observed trace for check --trace, and the assumptions and sources the comparison rests on. Leaving it out changes nothing.',
+        properties: {
+          mapping: str('Path to trace-map.json, relative to this spec and inside its folder.'),
+          observedTrace: str('Path to a normalized trace (made by trace import), relative to this spec and inside its folder.'),
+          assumptions: {
+            type: 'array',
+            description: 'What the comparison assumes, written separately from the claims.',
+            items: {
+              type: 'object',
+              properties: { id: str('Assumption id.', { pattern: ID }), text: str('The assumption in one sentence.'), scope: { enum: ['model', 'trace-only', 'mapping'] } },
+              required: ['id', 'text'],
+              additionalProperties: false,
+            },
+          },
+          sourceRefs: {
+            type: 'array',
+            description: 'Documents behind the model. A URL is documentation text only; nothing is fetched.',
+            items: {
+              type: 'object',
+              properties: { title: { type: 'string' }, url: { type: 'string', pattern: '^https://' }, kind: { enum: ['background', 'code', 'test'] } },
+              required: ['title'],
+              additionalProperties: false,
+            },
+          },
+        },
+        additionalProperties: false,
+      },
+      fuzz: {
+        type: 'object',
+        description: 'Optional settings for the fuzz command: which scheduled events it may move, repeat or drop. Leaving it out changes nothing.',
+        properties: {
+          events: {
+            type: 'object',
+            description: 'Map from an event name to how fuzz may perturb it.',
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                fuzzable: { type: 'boolean', description: 'Must be true for fuzz to touch this event.' },
+                shift: num('Largest shift of the event time, in model time units, either way.', { minimum: 0 }),
+                count: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 1000 }, minItems: 2, maxItems: 2, description: 'Smallest and largest burst count.' },
+                omit: { type: 'boolean', description: 'Fuzz may drop the event.' },
+              },
+              required: ['fuzzable'],
+              additionalProperties: false,
+            },
+          },
+        },
+        additionalProperties: false,
+      },
       limits: {
         type: 'object',
         properties: { steps: { type: 'integer', minimum: 1000, maximum: 50000000, description: 'Rule steps allowed per simulation (default 2000000).' } },

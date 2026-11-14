@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> · <a href="#before-and-after">Before And After</a> · <a href="#how-it-works">How It Works</a> · <a href="#proof">Proof</a> · <a href="#limits">Limits</a>
+  <a href="#install">Install</a> · <a href="#before-and-after">Before And After</a> · <a href="#how-it-works">How It Works</a> · <a href="#proof">Proof</a> · <a href="#reality-bridge-the-model-says-yes-the-trace-says-no">Reality Bridge</a> · <a href="#limits">Limits</a>
 </p>
 
 <p align="center">
@@ -165,6 +165,36 @@ Eleven examples, each with at least one claim a reader can break with a slider. 
 
 Below 100%, `check --mutate` names each deliberate bug that no claim of that example catches, by rule and location.
 
+## Reality Bridge: The Model Says Yes, The Trace Says No
+
+A claim can be true of the model while the real system behaves differently. The Reality Bridge replays the inputs of an observed trace through the same engine, matches the outputs the model predicts against the outputs the trace recorded, and reports explicit assertions as pass, fail or inconclusive, separately from the model's own claims. These are executable explanations with trace evidence, not formal verification.
+
+```bash
+node scripts/working-model.mjs check examples/reality-bridge/circuit-breaker.model.json      # 4/4 claims pass
+node scripts/working-model.mjs trace import examples/reality-bridge/observed.jsonl \
+  --mapping examples/reality-bridge/trace-map.json --complete --out examples/reality-bridge/observed.normalized.json
+node scripts/working-model.mjs check examples/reality-bridge/circuit-breaker.model.json --trace   # the trace disagrees
+```
+
+```text
+  Model: 4/4 claims pass | Observed: 1 pass, 2 fail, 0 inconclusive | status fail
+  First mismatch
+    unexpected_observed_output at 1800 ms, subject payments: Observed output with no predicted model output within 50 ms; trace declared complete
+```
+
+The synthetic demo in [examples/reality-bridge/](examples/reality-bridge/README.md) explains a breaker that counts failures in a row; the trace comes from one that counts failures over its last 10 calls, so it opens at 1.8 s, where the model says it stays closed. A second model with the corrected assumption passes the same assertions on the same trace.
+
+| Command | What it does |
+| --- | --- |
+| `trace import` | JSONL or an OTLP JSON subset into a normalized trace: sorted, capped, attributes allowlisted, completeness `unknown` unless declared |
+| `check --trace` | Integer-tick replay, one-to-one matching, assertions (`event-correspondence`, `event-order`, `response-before`, `never-observed`) and `reality-report.json` |
+| `build --trace` | The page plus a model-versus-observed timeline, re-checked in the browser against the command line's result |
+| `fuzz`, `minimize` | Seeded nearby cases (sliders, seed, fuzzable events) and deterministic shrinking of the first failure |
+| `bundle --public` | An allowlisted projection for publishing: kinds, time buckets and counts, never subjects or attributes |
+| `ci` | Claims, mutation, fuzz, trace assertions and browser parity as Markdown, JSON and JUnit XML, with a read-only GitHub Actions starter |
+
+Details: [docs/REALITY-BRIDGE.md](docs/REALITY-BRIDGE.md), [docs/FUZZ.md](docs/FUZZ.md), [docs/CI.md](docs/CI.md), [docs/TRACE-SECURITY.md](docs/TRACE-SECURITY.md) and [docs/CONFORMANCE-LIMITS.md](docs/CONFORMANCE-LIMITS.md). A trace is never required: without one, nothing changes, and a test keeps every existing example's check, run, mutation score and gallery page byte-identical.
+
 ## Limits
 
 - **Discrete time.** Models advance in fixed ticks. Continuous systems are approximated (the SIR example uses a small step), and a claim that is exact in continuous time may be off by a tick.
@@ -173,6 +203,7 @@ Below 100%, `check --mutate` names each deliberate bug that no claim of that exa
 - **Small models.** Up to 100000 ticks and ten million stored values per run, two million rule steps per simulation (copying or scanning a list costs a step per item), and 200 million steps for one check of every claim, sweeps and compares included. Sweeps re-run the model for each sample, so large models make slider dragging slow.
 - **Claims are only as good as their expressions.** A claim that reads back one of its own rules (a `min` cap, a guard) passes but proves nothing; `check --mutate` finds most such claims, but a mutation score only counts the bugs it tried, one small change at a time. Captions and part bindings are not tested, only the claims they cite, unless a counter, gauge or tank is given an `expect`: an independent expression `check` compares it with at every tick.
 - **Layout is on a grid.** Parts sit on an explicit grid. Text keeps a readable size on phones, which means a crowded grid may need wider parts or shorter labels; `layout` points these out.
+- **Trace evidence covers what was recorded.** An observed assertion says nothing about state the trace does not record, a missing event fails an assertion only when you declare the trace complete, and a pass covers one trace through one mapping. See [docs/CONFORMANCE-LIMITS.md](docs/CONFORMANCE-LIMITS.md).
 - **Browsers.** Runs are identical in Node and Chromium browsers. Other browsers may round `exp`, `log`, `pow`, `sin` and `cos` differently in the last digit, which can change a random arrival or a claim that sits exactly on its threshold.
 
 ## Works With

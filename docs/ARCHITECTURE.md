@@ -81,6 +81,29 @@ The score is killed (by claims or the engine) over killed plus survived. `check.
 
 `layoutReport()` measures the rendered page: parts outside the diagram, overlapping parts, text spilling out of its part or its pill, texts colliding inside a part, text rendered below 7.5 pixels, sideways page scroll, and binding errors.
 
+## Reality Bridge
+
+The comparison with an observed trace is built around the engine, never inside it, so every page and every existing result stays byte-identical (`tests/baseline.test.mjs`).
+
+```
+trace.jsonl / otlp.json ─► src/trace/normalize.mjs, otlp.mjs ─► normalized trace (canonical JSON)
+trace-map.json ─────────► src/trace/mapping.mjs (fixed selectors, names checked against the model)
+                              │
+                              ▼
+src/trace/replay.mjs      integer-tick replay: the engine's loop with mapped inputs replacing the declared events
+src/trace/match.mjs       one-to-one matching per subject, one pass over each sorted group
+src/trace/assertions.mjs  pass / fail / inconclusive with evidence ids
+src/trace/conformance.mjs evaluateReality(): all of the above → report
+      │                          │
+      ▼                          ▼
+src/node/reality.mjs      src/node/build-reality.mjs ── engine + trace modules in one bundle, plus src/page/reality-panel.js
+(check --trace, digests)         (build --trace: the browser re-runs evaluateReality and compares with Node)
+```
+
+`replay.mjs` reuses the compiled model, `resolveParams`, the seeded generator and the snapshot limits, and mirrors the engine's tick order: `rules.tick`, then that tick's events in spec order, with all replayed inputs of a tick fired as one block at the position of the first replayed event. `tests/trace-replay.test.mjs` replays each example's own schedule and requires identical snapshots, emits and firings.
+
+`src/fuzz/fuzz.mjs` makes case models the way `mutate.mjs` makes mutants: a shallow copy of the compiled model with other event closures and seed, checked with `checkClaims`. `src/fuzz/shrink.mjs` shrinks a failing case. `src/evidence/bundle.mjs` builds the public projection by allowlist, and `src/ci/report.mjs` aggregates and serialises CI results.
+
 ## Command Line
 
 `scripts/working-model.mjs` parses arguments and dispatches. `check.mjs` formats reports for the terminal or as JSON. `chrome.mjs` finds a local Chrome, Edge or Chromium, starts it headless with a throwaway profile on 127.0.0.1 and a random port, and speaks the DevTools protocol over Node's built-in WebSocket. `capture.mjs` builds a temporary page, opens it, and runs the layout check at 1280 by 800 and 390 by 844 at several moments, or captures screenshots and GIF frames (assembled with ffmpeg, retried at smaller widths until the file is under the size limit).
@@ -93,4 +116,8 @@ The command line has no runtime dependencies. `playwright-core` is a development
 - `tests/engine.test.mjs`: determinism, scheduling, every claim kind with its counterexample, sweeps, compares, lint rules and formatting.
 - `tests/spec.test.mjs`: the schema file is current; broken fixtures fail with the expected codes and paths; every example passes `check`, has a breakable claim and sources; the examples together use every part and claim kind; the inlined bundle gives the same results as the modules; built pages are offline; the CLI's exit codes and outputs.
 - `tests/mutate.test.mjs`: every mutation operator with its location, stable numbering, mutants that run as intended, equivalent and visual-only detection across sweep samples, engine kills and the step budget, `mutate.ignore`, the seeded cap, the CLI (`--json`, `--mutate-strict`, `--min-score`, `build --mutate`), the first-come-first-served teaching case from `references/claims.md`, and that the scores in the gallery pages, the gallery index and the README equal what the CLI computes.
+- `tests/baseline.test.mjs`: every example's check report, default run, mutation report and gallery page against values frozen before the Reality Bridge.
+- `tests/trace-normalize.test.mjs`, `tests/trace-otlp.test.mjs`, `tests/trace-replay.test.mjs`, `tests/trace-match.test.mjs`, `tests/reality-cli.test.mjs`, `tests/reality-page.test.mjs`: import, the OTLP subset, replay equal to the engine, matching and assertions, the mapping, exit codes and the comparison page's scripts and hashes.
+- `tests/fuzz.test.mjs`, `tests/evidence-privacy.test.mjs`, `tests/ci-report.test.mjs`: reproducible fuzzing and shrinking, the public projection, and CI results and serialisation.
+- `tests/e2e/reality.e2e.mjs`: the comparison page in Chrome: the browser's result equals Node's, keyboard, three widths, dark theme, and markup that stays inert.
 - `tests/e2e/pages.e2e.mjs`: every example in headless Chrome with all requests aborted: claims panel equals Node, playback, keyboard, the layout report at both sizes, sliders and choice buttons that flip claims and reset, dark theme and reduced motion.

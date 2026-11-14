@@ -1,0 +1,1093 @@
+{
+  "completeness": "unknown",
+  "events": [
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00001",
+      "kind": "call_failed",
+      "subject": "req-0001",
+      "timeMs": 200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00002",
+      "kind": "call_succeeded",
+      "subject": "req-0002",
+      "timeMs": 400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00003",
+      "kind": "call_failed",
+      "subject": "req-0003",
+      "timeMs": 600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00004",
+      "kind": "call_succeeded",
+      "subject": "req-0004",
+      "timeMs": 800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00005",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00006",
+      "kind": "call_failed",
+      "subject": "req-0005",
+      "timeMs": 1000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00007",
+      "kind": "call_succeeded",
+      "subject": "req-0006",
+      "timeMs": 1200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00008",
+      "kind": "call_failed",
+      "subject": "req-0007",
+      "timeMs": 1400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00009",
+      "kind": "call_succeeded",
+      "subject": "req-0008",
+      "timeMs": 1600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00010",
+      "kind": "call_failed",
+      "subject": "req-0009",
+      "timeMs": 1800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00011",
+      "kind": "breaker_opened",
+      "subject": "payments",
+      "timeMs": 1800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00012",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 1999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00013",
+      "kind": "call_rejected",
+      "subject": "req-0010",
+      "timeMs": 2000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00014",
+      "kind": "call_rejected",
+      "subject": "req-0011",
+      "timeMs": 2200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00015",
+      "kind": "call_rejected",
+      "subject": "req-0012",
+      "timeMs": 2400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00016",
+      "kind": "call_rejected",
+      "subject": "req-0013",
+      "timeMs": 2600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00017",
+      "kind": "call_rejected",
+      "subject": "req-0014",
+      "timeMs": 2800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00018",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 2999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00019",
+      "kind": "call_rejected",
+      "subject": "req-0015",
+      "timeMs": 3000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00020",
+      "kind": "call_rejected",
+      "subject": "req-0016",
+      "timeMs": 3200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00021",
+      "kind": "call_rejected",
+      "subject": "req-0017",
+      "timeMs": 3400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00022",
+      "kind": "call_rejected",
+      "subject": "req-0018",
+      "timeMs": 3600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00023",
+      "kind": "call_rejected",
+      "subject": "req-0019",
+      "timeMs": 3800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00024",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 3999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00025",
+      "kind": "call_rejected",
+      "subject": "req-0020",
+      "timeMs": 4000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00026",
+      "kind": "call_rejected",
+      "subject": "req-0021",
+      "timeMs": 4200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00027",
+      "kind": "call_rejected",
+      "subject": "req-0022",
+      "timeMs": 4400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00028",
+      "kind": "call_rejected",
+      "subject": "req-0023",
+      "timeMs": 4600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00029",
+      "kind": "call_rejected",
+      "subject": "req-0024",
+      "timeMs": 4800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00030",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 4999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00031",
+      "kind": "call_rejected",
+      "subject": "req-0025",
+      "timeMs": 5000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00032",
+      "kind": "call_rejected",
+      "subject": "req-0026",
+      "timeMs": 5200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00033",
+      "kind": "call_rejected",
+      "subject": "req-0027",
+      "timeMs": 5400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00034",
+      "kind": "call_rejected",
+      "subject": "req-0028",
+      "timeMs": 5600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00035",
+      "kind": "call_failed",
+      "subject": "req-0029",
+      "timeMs": 5800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00036",
+      "kind": "breaker_opened",
+      "subject": "payments",
+      "timeMs": 5800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00037",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 5999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00038",
+      "kind": "call_rejected",
+      "subject": "req-0030",
+      "timeMs": 6000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00039",
+      "kind": "call_rejected",
+      "subject": "req-0031",
+      "timeMs": 6200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00040",
+      "kind": "call_rejected",
+      "subject": "req-0032",
+      "timeMs": 6400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00041",
+      "kind": "call_rejected",
+      "subject": "req-0033",
+      "timeMs": 6600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00042",
+      "kind": "call_rejected",
+      "subject": "req-0034",
+      "timeMs": 6800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00043",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 6999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00044",
+      "kind": "call_rejected",
+      "subject": "req-0035",
+      "timeMs": 7000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00045",
+      "kind": "call_rejected",
+      "subject": "req-0036",
+      "timeMs": 7200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00046",
+      "kind": "call_rejected",
+      "subject": "req-0037",
+      "timeMs": 7400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00047",
+      "kind": "call_rejected",
+      "subject": "req-0038",
+      "timeMs": 7600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00048",
+      "kind": "call_rejected",
+      "subject": "req-0039",
+      "timeMs": 7800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00049",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 7999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00050",
+      "kind": "call_rejected",
+      "subject": "req-0040",
+      "timeMs": 8000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00051",
+      "kind": "call_rejected",
+      "subject": "req-0041",
+      "timeMs": 8200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00052",
+      "kind": "call_rejected",
+      "subject": "req-0042",
+      "timeMs": 8400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00053",
+      "kind": "call_rejected",
+      "subject": "req-0043",
+      "timeMs": 8600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00054",
+      "kind": "call_rejected",
+      "subject": "req-0044",
+      "timeMs": 8800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00055",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 8999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00056",
+      "kind": "call_rejected",
+      "subject": "req-0045",
+      "timeMs": 9000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00057",
+      "kind": "call_rejected",
+      "subject": "req-0046",
+      "timeMs": 9200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00058",
+      "kind": "call_rejected",
+      "subject": "req-0047",
+      "timeMs": 9400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00059",
+      "kind": "call_rejected",
+      "subject": "req-0048",
+      "timeMs": 9600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00060",
+      "kind": "call_succeeded",
+      "subject": "req-0049",
+      "timeMs": 9800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00061",
+      "kind": "breaker_closed",
+      "subject": "payments",
+      "timeMs": 9800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00062",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 9999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00063",
+      "kind": "call_succeeded",
+      "subject": "req-0050",
+      "timeMs": 10000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00064",
+      "kind": "call_succeeded",
+      "subject": "req-0051",
+      "timeMs": 10200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00065",
+      "kind": "call_succeeded",
+      "subject": "req-0052",
+      "timeMs": 10400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00066",
+      "kind": "call_succeeded",
+      "subject": "req-0053",
+      "timeMs": 10600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00067",
+      "kind": "call_succeeded",
+      "subject": "req-0054",
+      "timeMs": 10800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00068",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 10999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00069",
+      "kind": "call_succeeded",
+      "subject": "req-0055",
+      "timeMs": 11000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00070",
+      "kind": "call_succeeded",
+      "subject": "req-0056",
+      "timeMs": 11200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00071",
+      "kind": "call_succeeded",
+      "subject": "req-0057",
+      "timeMs": 11400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00072",
+      "kind": "call_succeeded",
+      "subject": "req-0058",
+      "timeMs": 11600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00073",
+      "kind": "call_succeeded",
+      "subject": "req-0059",
+      "timeMs": 11800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00074",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 11999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00075",
+      "kind": "call_succeeded",
+      "subject": "req-0060",
+      "timeMs": 12000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00076",
+      "kind": "call_succeeded",
+      "subject": "req-0061",
+      "timeMs": 12200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00077",
+      "kind": "call_succeeded",
+      "subject": "req-0062",
+      "timeMs": 12400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00078",
+      "kind": "call_succeeded",
+      "subject": "req-0063",
+      "timeMs": 12600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00079",
+      "kind": "call_succeeded",
+      "subject": "req-0064",
+      "timeMs": 12800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00080",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 12999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00081",
+      "kind": "call_succeeded",
+      "subject": "req-0065",
+      "timeMs": 13000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00082",
+      "kind": "call_succeeded",
+      "subject": "req-0066",
+      "timeMs": 13200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00083",
+      "kind": "call_succeeded",
+      "subject": "req-0067",
+      "timeMs": 13400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00084",
+      "kind": "call_succeeded",
+      "subject": "req-0068",
+      "timeMs": 13600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00085",
+      "kind": "call_succeeded",
+      "subject": "req-0069",
+      "timeMs": 13800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00086",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 13999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00087",
+      "kind": "call_succeeded",
+      "subject": "req-0070",
+      "timeMs": 14000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00088",
+      "kind": "call_succeeded",
+      "subject": "req-0071",
+      "timeMs": 14200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00089",
+      "kind": "call_succeeded",
+      "subject": "req-0072",
+      "timeMs": 14400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00090",
+      "kind": "call_succeeded",
+      "subject": "req-0073",
+      "timeMs": 14600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00091",
+      "kind": "call_succeeded",
+      "subject": "req-0074",
+      "timeMs": 14800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00092",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 14999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00093",
+      "kind": "call_succeeded",
+      "subject": "req-0075",
+      "timeMs": 15000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00094",
+      "kind": "call_succeeded",
+      "subject": "req-0076",
+      "timeMs": 15200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00095",
+      "kind": "call_succeeded",
+      "subject": "req-0077",
+      "timeMs": 15400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00096",
+      "kind": "call_succeeded",
+      "subject": "req-0078",
+      "timeMs": 15600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00097",
+      "kind": "call_succeeded",
+      "subject": "req-0079",
+      "timeMs": 15800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00098",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 15999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00099",
+      "kind": "call_succeeded",
+      "subject": "req-0080",
+      "timeMs": 16000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00100",
+      "kind": "call_succeeded",
+      "subject": "req-0081",
+      "timeMs": 16200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00101",
+      "kind": "call_succeeded",
+      "subject": "req-0082",
+      "timeMs": 16400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00102",
+      "kind": "call_succeeded",
+      "subject": "req-0083",
+      "timeMs": 16600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00103",
+      "kind": "call_succeeded",
+      "subject": "req-0084",
+      "timeMs": 16800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00104",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 16999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00105",
+      "kind": "call_succeeded",
+      "subject": "req-0085",
+      "timeMs": 17000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00106",
+      "kind": "call_succeeded",
+      "subject": "req-0086",
+      "timeMs": 17200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00107",
+      "kind": "call_succeeded",
+      "subject": "req-0087",
+      "timeMs": 17400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00108",
+      "kind": "call_succeeded",
+      "subject": "req-0088",
+      "timeMs": 17600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00109",
+      "kind": "call_succeeded",
+      "subject": "req-0089",
+      "timeMs": 17800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00110",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 17999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00111",
+      "kind": "call_succeeded",
+      "subject": "req-0090",
+      "timeMs": 18000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00112",
+      "kind": "call_succeeded",
+      "subject": "req-0091",
+      "timeMs": 18200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00113",
+      "kind": "call_succeeded",
+      "subject": "req-0092",
+      "timeMs": 18400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00114",
+      "kind": "call_succeeded",
+      "subject": "req-0093",
+      "timeMs": 18600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00115",
+      "kind": "call_succeeded",
+      "subject": "req-0094",
+      "timeMs": 18800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00116",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 18999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00117",
+      "kind": "call_succeeded",
+      "subject": "req-0095",
+      "timeMs": 19000
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00118",
+      "kind": "call_succeeded",
+      "subject": "req-0096",
+      "timeMs": 19200
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00119",
+      "kind": "call_succeeded",
+      "subject": "req-0097",
+      "timeMs": 19400
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00120",
+      "kind": "call_succeeded",
+      "subject": "req-0098",
+      "timeMs": 19600
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00121",
+      "kind": "call_succeeded",
+      "subject": "req-0099",
+      "timeMs": 19800
+    },
+    {
+      "attrs": {},
+      "id": "ev-00122",
+      "kind": "heartbeat",
+      "subject": "client-1",
+      "timeMs": 19999
+    },
+    {
+      "attrs": {
+        "route": "/pay"
+      },
+      "id": "ev-00123",
+      "kind": "call_succeeded",
+      "subject": "req-0100",
+      "timeMs": 20000
+    }
+  ],
+  "kind": "working-model-trace",
+  "origin": {
+    "absoluteTime": false,
+    "kind": "imported-jsonl",
+    "sourceDigest": "sha256:755b1fec845bf3d77f539cfe0c31609ee1c93a0ed0e1c9ae596bd5b44361a81a"
+  },
+  "private": {
+    "sourcePath": "examples/reality-bridge/observed.jsonl"
+  },
+  "schemaVersion": 1,
+  "stats": {
+    "droppedAttrs": 322,
+    "droppedFields": 0,
+    "records": 123,
+    "truncated": false
+  },
+  "timeBase": "relative-ms",
+  "warnings": [
+    {
+      "code": "W_ATTRS_DROPPED",
+      "message": "322 attribute values were dropped (not allowlisted): authorization, client_ip, customer_email, pid, reason"
+    },
+    {
+      "code": "W_COMPLETENESS_UNKNOWN",
+      "message": "completeness is unknown: a missing observed event can only make an assertion inconclusive. Pass --complete only after checking that the instrumentation records every event."
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+# Example: Explanation CI for working models.
+# Copy to .github/workflows/working-model-ci.yml to use it. It is named
+# *.example.yml so it does not run in this repository by itself.
+#
+# Read-only by design:
+#   - runs on pull_request (never pull_request_target), so a pull request
+#     from a fork gets no secrets and a read-only token;
+#   - permissions: contents: read, and no step uses a token or a secret;
+#   - the tool runs from the base branch (trusted code); the pull request's
+#     models, mappings and traces are only data, parsed by the bounded rule
+#     language, which has no access to files, network or JavaScript;
+#   - nothing is installed: the CLI has no runtime dependencies.
+# Pin each action to a full commit SHA before use (the tags below are for
+# reading only; replace them with the SHAs you have reviewed).
+
+name: working-model explanation CI
+
+on:
+  pull_request:
+    paths:
+      - '**/*.model.json'
+      - '**/trace-map.json'
+      - '**/*.normalized.json'
+      - '.working-model-ci.json'
+
+permissions:
+  contents: read
+
+jobs:
+  explain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the pull request (data only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out the tool from the base branch (trusted code)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .working-model-tool
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run the explanation checks
+        # Exit 1 when a configured gate fails; the summary is written either way.
+        run: |
+          node .working-model-tool/scripts/working-model.mjs ci --config .working-model-ci.json --format markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: working-model-ci
+          path: artifacts/
+          if-no-files-found: ignore
