@@ -20,7 +20,9 @@ var Fluid = (function () {
     function emit() { if (onUpdate) onUpdate(x, v); }
     function settle() { x = target; v = 0; raf = 0; emit(); if (onRest) onRest(x); }
     function step(t) {
-      var dt = Math.min(0.064, (t - last) / 1000) || 1 / 60;
+      var dt = (t - last) / 1000;
+      if (!(dt > 0)) dt = 1 / 60; // the first frame's timestamp can be earlier than the call to to()
+      if (dt > 0.064) dt = 0.064;
       last = t;
       var n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
       for (var i = 0; i < n; i++) { var a = -k * (x - target) - c * v; v += a * h; x += v * h; }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-XSZuKiNje3i86mGE6vGafoNyPshNESC1Cis/1vLPzZE=' 'sha256-0WHpT4QVheyqFJGU+/dNvdzKNESPFMn+ACibS0wNfyM='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-XSZuKiNje3i86mGE6vGafoNyPshNESC1Cis/1vLPzZE=' 'sha256-ot5Y3VjCFh062MFK88ihOdeDTKB49igiVUo4msphlmk='; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="generator" content="working-model ">
 <title>Inventory Reorder Point - working model</title>
 <style>
@@ -3160,7 +3160,9 @@ var Fluid = (function () {
     function emit() { if (onUpdate) onUpdate(x, v); }
     function settle() { x = target; v = 0; raf = 0; emit(); if (onRest) onRest(x); }
     function step(t) {
-      var dt = Math.min(0.064, (t - last) / 1000) || 1 / 60;
+      var dt = (t - last) / 1000;
+      if (!(dt > 0)) dt = 1 / 60; // the first frame's timestamp can be earlier than the call to to()
+      if (dt > 0.064) dt = 0.064;
       last = t;
       var n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
       for (var i = 0; i < n; i++) { var a = -k * (x - target) - c * v; v += a * h; x += v * h; }
