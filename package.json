@@ -1,7 +1,7 @@
 {
   "name": "working-model",
   "version": "0.1.0",
-  "description": "Ask how anything works. Get a working model: an animated explainer you can play with, where every claim is a passing test.",
+  "description": "Ask how anything works and get an interactive explainer where every claim is a passing test. A Claude Code skill (agent skill) for Claude Code, Codex and Cursor.",
   "type": "module",
   "license": "MIT",
   "author": "Logit Solutions AI",
@@ -33,13 +33,22 @@
     "gallery": "node scripts/working-model.mjs gallery --thumbs"
   },
   "keywords": [
-    "agent-skill",
     "claude-code",
+    "claude-skill",
+    "agent-skills",
+    "claude-code-skill",
+    "codex",
+    "cursor",
+    "agent-skill",
     "explainer",
+    "interactive-explainer",
+    "explorable-explanations",
     "simulation",
     "interactive",
+    "visualization",
+    "education",
     "property-based-testing",
-    "visualization"
+    "mutation-testing"
   ],
   "devDependencies": {
     "playwright-core": "1.65.0"

@@ -1,6 +1,6 @@
 {
   "name": "working-model",
-  "description": "Working Model: interactive explainers whose claims are checked by simulation.",
+  "description": "working-model: interactive explainers where every claim is a passing test. A Claude Code skill (agent skill) for Claude Code, Codex and Cursor.",
   "owner": {
     "name": "Logit Solutions AI",
     "url": "https://github.com/logitsolutionsai"
@@ -9,9 +9,15 @@
     {
       "name": "working-model",
       "source": "./",
-      "description": "Ask how anything works and get a working model: an animated, interactive explainer page where every claim is a passing test.",
+      "description": "Ask how anything works and get an interactive explainer where every claim is a passing test. A Claude Code skill (agent skill) for Claude Code, Codex and Cursor.",
       "category": "learning",
-      "tags": ["explainer", "simulation", "visualization"]
+      "tags": [
+        "explainer",
+        "simulation",
+        "visualization",
+        "education",
+        "testing"
+      ]
     }
   ]
 }

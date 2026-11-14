@@ -2,7 +2,7 @@
   "name": "working-model",
   "displayName": "Working Model",
   "version": "0.1.0",
-  "description": "Ask how anything works and get a working model: an animated, interactive explainer page where every claim is a passing test.",
+  "description": "Ask how anything works and get an interactive explainer where every claim is a passing test. A Claude Code skill (agent skill) for Claude Code, Codex and Cursor.",
   "author": {
     "name": "Logit Solutions AI",
     "url": "https://github.com/logitsolutionsai"
@@ -10,5 +10,22 @@
   "homepage": "https://github.com/logitsolutionsai/working-model",
   "repository": "https://github.com/logitsolutionsai/working-model",
   "license": "MIT",
-  "keywords": ["explainer", "simulation", "interactive", "visualization", "education", "testing"]
+  "keywords": [
+    "claude-code",
+    "claude-skill",
+    "agent-skills",
+    "claude-code-skill",
+    "codex",
+    "cursor",
+    "agent-skill",
+    "explainer",
+    "interactive-explainer",
+    "explorable-explanations",
+    "simulation",
+    "interactive",
+    "visualization",
+    "education",
+    "property-based-testing",
+    "mutation-testing"
+  ]
 }
