@@ -1,0 +1,161 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "token-bucket",
+  "title": "Token Bucket Rate Limiter",
+  "summary": "A bucket holds up to {capacity} tokens and refills at {refill} per second. Each request spends one token; a request that finds less than one token is rejected. Bursts pass up to the bucket size, and sustained traffic is held to the refill rate.",
+  "sources": [
+    { "title": "Token bucket (Wikipedia)", "url": "https://en.wikipedia.org/wiki/Token_bucket" },
+    { "title": "RFC 2697: A Single Rate Three Color Marker (token bucket metering)", "url": "https://www.rfc-editor.org/rfc/rfc2697" }
+  ],
+  "timeUnit": "s",
+  "dt": 0.1,
+  "duration": 16,
+  "seed": 7,
+  "params": [
+    { "id": "capacity", "label": "Bucket size", "min": 1, "max": 30, "step": 1, "default": 10, "unit": "tokens" },
+    { "id": "refill", "label": "Refill rate", "min": 0.5, "max": 8, "step": 0.5, "default": 2, "unit": "per s" },
+    { "id": "burst", "label": "Burst size", "min": 1, "max": 30, "step": 1, "default": 15, "unit": "requests" },
+    { "id": "rate", "label": "Steady traffic", "min": 0.5, "max": 10, "step": 0.5, "default": 5, "unit": "per s" }
+  ],
+  "events": [
+    { "name": "request", "at": 1, "count": "burst", "label": "burst" },
+    { "name": "request", "every": "1 / rate", "from": 8, "until": 16, "label": "steady traffic" }
+  ],
+  "state": { "tokens": "capacity", "accepted": 0, "rejected": 0, "lateAccepted": 0 },
+  "derived": { "fill": "tokens / capacity", "lateRate": "t > 12 ? lateAccepted / (t - 12) : 0" },
+  "rules": {
+    "tick": "tokens = min(capacity, tokens + refill * dt)",
+    "on": {
+      "request": [
+        "if tokens >= 1 {",
+        "  tokens -= 1",
+        "  accepted += 1",
+        "  if t > 12 { lateAccepted += 1 }",
+        "  emit('accept')",
+        "} else {",
+        "  rejected += 1",
+        "  emit('reject')",
+        "}"
+      ]
+    }
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    { "id": "clients", "type": "box", "at": [0, 1, 3, 2], "label": "Clients", "text": "{accepted + rejected} sent", "pulse": "request" },
+    {
+      "id": "bucket",
+      "type": "tank",
+      "at": [4, 0, 4, 4],
+      "label": "Bucket",
+      "level": "fill",
+      "text": "{tokens:.1} of {capacity} tokens",
+      "tone": "accent"
+    },
+    { "id": "server", "type": "box", "at": [9, 0, 3, 2], "label": "Server", "text": "{accepted} served", "pulse": "accept" },
+    {
+      "id": "dropped",
+      "type": "box",
+      "at": [9, 2, 3, 2],
+      "label": "Rejected",
+      "text": "{rejected} turned away",
+      "tone": "bad",
+      "pulse": "reject"
+    },
+    {
+      "id": "in",
+      "type": "link",
+      "from": "clients",
+      "to": "bucket",
+      "on": ["accept", "reject"],
+      "tone": { "accept": "accent", "reject": "bad" }
+    },
+    { "id": "pass", "type": "link", "from": "bucket", "to": "server", "on": "accept", "tone": "accent", "after": "in" },
+    { "id": "drop", "type": "link", "from": "bucket", "to": "dropped", "on": "reject", "tone": "bad", "after": "in" },
+    { "id": "refill-label", "type": "label", "at": [4, 4, 4, 1], "text": "refills +{refill} tokens per second", "size": "s" },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 5, 12, 3],
+      "label": "Tokens in the bucket",
+      "series": [{ "expr": "tokens", "label": "tokens", "tone": "accent" }],
+      "y": [0, "capacity"],
+      "refs": [{ "y": "capacity", "label": "bucket size" }]
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 1,
+      "text": "The bucket starts full: {tokens:int} tokens, enough for {capacity} requests at once.",
+      "cites": ["never-beyond-envelope"]
+    },
+    {
+      "from": 1,
+      "to": 3,
+      "text": "A burst of {burst} requests arrives together. The first {capacity} spend the stored tokens; the rest find the bucket empty.",
+      "cites": ["burst-passes", "excess-rejected"]
+    },
+    {
+      "from": 3,
+      "to": 8,
+      "text": "Tokens drip back at {refill} per second, so the bucket takes {capacity / refill:.1} seconds to refill.",
+      "cites": ["refills-before-traffic"]
+    },
+    {
+      "from": 8,
+      "to": 16,
+      "text": "Now {rate} requests arrive every second. Once the stored tokens are gone, only {refill} per second get through: {lateRate:.1} per second right now.",
+      "cites": ["holds-to-refill-rate", "slow-traffic-passes"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "burst-passes",
+      "kind": "at",
+      "t": 1,
+      "expr": "accepted == capacity",
+      "text": "A full bucket lets exactly the first {capacity} requests of the burst through."
+    },
+    {
+      "id": "excess-rejected",
+      "kind": "at",
+      "t": 1,
+      "expr": "rejected == burst - capacity",
+      "text": "From the {capacity + 1:ord} request on, every request in the burst is rejected."
+    },
+    {
+      "id": "never-beyond-envelope",
+      "kind": "always",
+      "expr": "accepted <= capacity + refill * t",
+      "text": "From the start to any moment t, no more than {capacity} + {refill} × t requests get through: the burst allowance plus the refill rate."
+    },
+    {
+      "id": "slow-traffic-passes",
+      "kind": "sweep",
+      "samples": 40,
+      "vary": ["rate", "refill"],
+      "holdsWhen": "rate <= refill",
+      "claim": {
+        "kind": "at",
+        "t": 16,
+        "expr": "rejected == max(0, burst - capacity) and tokens >= min(capacity, max(0, capacity - burst) + 7 * refill) - 2"
+      },
+      "text": "Steady traffic no faster than the refill rate is never turned away and leaves the bucket within two tokens of where it started; faster traffic drains it. This needs a bucket big enough to absorb uneven arrival times."
+    },
+    {
+      "id": "refills-before-traffic",
+      "kind": "eventually",
+      "from": 1.1,
+      "by": 8,
+      "expr": "tokens == capacity",
+      "text": "After the burst, the bucket is full again before steady traffic starts."
+    },
+    {
+      "id": "holds-to-refill-rate",
+      "kind": "at",
+      "t": 16,
+      "expr": "abs(lateRate - refill) <= 0.3",
+      "text": "Once traffic outpaces the refill rate long enough to drain the bucket, requests pass at the refill rate, {refill} per second."
+    }
+  ]
+}

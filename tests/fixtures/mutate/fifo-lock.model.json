@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schema/model.schema.json",
+  "title": "First Come, First Served Lock",
+  "summary": "{threads} threads ask for one lock; each holds it for {hold} s, and the rest wait in a queue.",
+  "timeUnit": "s",
+  "dt": 0.1,
+  "duration": 20,
+  "params": [
+    { "id": "threads", "label": "Threads", "min": 2, "max": 8, "step": 1, "default": 5 },
+    { "id": "hold", "label": "Hold time", "min": 1, "max": 3, "step": 0.5, "default": 2, "unit": "s" }
+  ],
+  "events": [{ "name": "arrive", "at": 1, "count": "threads" }],
+  "state": { "waiting": [], "arrivedAt": "fill(threads, 0)", "holder": -1, "freeAt": 0, "served": 0 },
+  "rules": {
+    "tick": [
+      "if holder >= 0 and tick >= freeAt {",
+      "  holder = -1",
+      "}",
+      "if holder < 0 and len(waiting) > 0 {",
+      "  holder = shift(waiting)",
+      "  freeAt = tick + round(hold / dt)",
+      "  served += 1",
+      "  emit('enter', holder)",
+      "}"
+    ],
+    "on": { "arrive": ["arrivedAt[seq] = t", "push(waiting, seq)"] }
+  },
+  "parts": [
+    { "id": "queue", "type": "queue", "at": [0, 0, 6, 2], "label": "Waiting", "items": "waiting", "slots": "threads" },
+    { "id": "done", "type": "counter", "at": [8, 0, 3, 2], "label": "Served", "value": "served" }
+  ],
+  "narration": [{ "from": 0, "text": "{threads} threads ask for the lock.", "cites": ["fifo", "all-served"] }],
+  "claims": [
+    { "id": "fifo", "kind": "whenever", "event": "enter", "expr": "len(waiting) == 0 or arrivedAt[payload] <= arrivedAt[waiting[0]]",
+      "text": "The thread that gets the lock asked no later than any thread still waiting." },
+    { "id": "all-served", "kind": "eventually", "expr": "served == threads", "text": "Every thread gets the lock in the end." }
+  ]
+}

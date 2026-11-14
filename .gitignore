@@ -1,0 +1,13 @@
+node_modules/
+tests/output/
+tests/output-tmp-*/
+*.log
+.DS_Store
+Thumbs.db
+
+# built pages from `build`; the committed gallery/ and docs/media/ are the exception
+*.html
+!gallery/*.html
+
+# screenshots that `layout` writes next to a spec
+working-model-shots/

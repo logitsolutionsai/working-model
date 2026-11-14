@@ -1,0 +1,178 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "bloom-filter",
+  "title": "Bloom Filter False Positives",
+  "summary": "A Bloom filter stores {n} items in {m} bits. Adding an item sets {k} bits chosen by hash functions; checking an item looks at the same bits. If any is clear, the item was never added. If all are set, it was probably added, but those bits may have been set by other items: a false positive.",
+  "sources": [
+    { "title": "Bloom, Space/Time Trade-offs in Hash Coding with Allowable Errors (1970)", "url": "https://doi.org/10.1145/362686.362692" },
+    {
+      "title": "Broder and Mitzenmacher, Network Applications of Bloom Filters: A Survey (2004)",
+      "url": "https://doi.org/10.1080/15427951.2004.10129096"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.05,
+  "duration": 40,
+  "seed": 9,
+  "params": [
+    { "id": "m", "label": "Bits", "min": 16, "max": 128, "step": 8, "default": 64 },
+    { "id": "k", "label": "Hash functions", "min": 1, "max": 8, "step": 1, "default": 3 },
+    { "id": "n", "label": "Items added", "min": 2, "max": 40, "step": 1, "default": 12 }
+  ],
+  "events": [{ "name": "add", "every": 0.5, "from": 0.5, "until": "n * 0.5" }, { "name": "query", "every": 0.05, "from": "n * 0.5 + 1", "until": 40 }],
+  "state": {
+    "bits": "fill(m, 0)",
+    "added": [],
+    "lastPos": [],
+    "lastAll": false,
+    "phase": "'empty'",
+    "memberChecks": 0,
+    "falseNegatives": 0,
+    "freshChecks": 0,
+    "falsePositives": 0
+  },
+  "derived": {
+    "ones": "sum(bits)",
+    "expectedFp": "(sum(bits) / m) ** k",
+    "measuredFp": "freshChecks > 0 ? falsePositives / freshChecks : 0",
+    "formula": "(1 - exp(-k * n / m)) ** k"
+  },
+  "rules": {
+    "on": {
+      "add": [
+        "let pos = []",
+        "for j in range(k) {",
+        "  let b = randint(0, m - 1)",
+        "  push(pos, b)",
+        "  bits[b] = 1",
+        "}",
+        "push(added, pos)",
+        "lastPos = pos",
+        "lastAll = true",
+        "phase = 'adding item ' + str(len(added))",
+        "emit('set')"
+      ],
+      "query": [
+        "let member = seq % 2 == 0",
+        "let pos = []",
+        "if member {",
+        "  pos = pick(added)",
+        "} else {",
+        "  for j in range(k) { push(pos, randint(0, m - 1)) }",
+        "}",
+        "let found = 0",
+        "for b in pos {",
+        "  if bits[b] == 1 { found += 1 }",
+        "}",
+        "let all = found == k",
+        "lastPos = pos",
+        "lastAll = all",
+        "if member {",
+        "  memberChecks += 1",
+        "  phase = 'checking an added item'",
+        "  if not all { falseNegatives += 1 }",
+        "  emit('check')",
+        "} else {",
+        "  freshChecks += 1",
+        "  phase = 'checking a new item'",
+        "  if all {",
+        "    falsePositives += 1",
+        "    emit('false-positive')",
+        "  }",
+        "  emit('check')",
+        "}"
+      ]
+    }
+  },
+  "layout": { "cols": 12, "rows": 9 },
+  "parts": [
+    { "id": "item", "type": "box", "at": [0, 0, 3, 2], "label": "Item", "text": "{phase}" },
+    {
+      "id": "answer",
+      "type": "lamp",
+      "at": [0, 2, 3, 2],
+      "label": "Answer",
+      "on": "lastAll",
+      "tone": "accent",
+      "text": "{lastAll ? 'maybe there' : 'not there'}"
+    },
+    { "id": "bits", "type": "grid", "at": [4, 0, 8, 4], "label": "Bit array", "cells": "bits", "mark": "lastPos", "showValues": false },
+    { "id": "probe", "type": "link", "from": "item", "to": "bits", "on": ["set", "check"], "tone": { "set": "accent", "check": "info" } },
+    {
+      "id": "fp",
+      "type": "counter",
+      "at": [0, 4, 4, 2],
+      "label": "False positives",
+      "value": "falsePositives",
+      "tone": "bad",
+      "pulse": "false-positive"
+    },
+    { "id": "checked", "type": "counter", "at": [4, 4, 4, 2], "label": "New items checked", "value": "freshChecks" },
+    {
+      "id": "chance",
+      "type": "gauge",
+      "at": [8, 4, 4, 2],
+      "label": "False-positive odds",
+      "value": "expectedFp",
+      "max": 0.3,
+      "format": ".1%",
+      "zones": [{ "from": 0.1, "to": 0.3, "tone": "bad" }]
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 6, 12, 3],
+      "label": "False-positive rate",
+      "series": [
+        { "expr": "expectedFp", "label": "expected from bits set", "tone": "accent" },
+        { "expr": "measuredFp", "label": "measured", "tone": "bad" }
+      ]
+    }
+  ],
+  "narration": [
+    { "from": 0, "to": 6.5, "text": "Each new item sets {k} bits. {ones} of {m} bits are set so far.", "cites": ["no-false-negatives"] },
+    {
+      "from": 6.5,
+      "to": 15,
+      "text": "Now the filter is checked, alternating items that were added with items that never were. Added items always pass.",
+      "cites": ["no-false-negatives", "under-ten-percent"]
+    },
+    {
+      "from": 15,
+      "to": 40,
+      "text": "A new item is wrongly reported present when all {k} of its bits happen to be set: {expectedFp:.1%} of the time with {ones} bits set. Measured so far: {measuredFp:.1%}.",
+      "cites": ["matches-fill", "more-hashes-not-always-better"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "no-false-negatives",
+      "kind": "at",
+      "t": 40,
+      "expr": "memberChecks > 0 and falseNegatives == 0",
+      "text": "An item that was added is never reported missing: every check of an added item finds all {k} of its bits set. A Bloom filter has no false negatives."
+    },
+    {
+      "id": "under-ten-percent",
+      "kind": "always",
+      "expr": "expectedFp <= 0.1",
+      "text": "With {n} items in {m} bits and {k} hash functions, the chance of a false positive stays under ten percent."
+    },
+    {
+      "id": "matches-fill",
+      "kind": "at",
+      "t": 40,
+      "expr": "freshChecks > 0 and abs(measuredFp - expectedFp) <= 3 * sqrt(expectedFp * (1 - expectedFp) / max(1, freshChecks)) + 0.01",
+      "text": "The measured false-positive rate agrees with the share of bits set, raised to the power {k}, within sampling error."
+    },
+    {
+      "id": "more-hashes-not-always-better",
+      "kind": "compare",
+      "text": "More hash functions are not always better: with {m} bits for {n} items, eight give more false positives than four.",
+      "a": { "k": 4 },
+      "b": { "k": 8 },
+      "measure": { "of": "expectedFp", "agg": "final", "label": "final false-positive chance" },
+      "expect": "a < b"
+    }
+  ]
+}

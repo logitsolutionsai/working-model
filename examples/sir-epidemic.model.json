@@ -1,0 +1,171 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "sir-epidemic",
+  "title": "SIR Epidemic and Herd Immunity",
+  "summary": "A town of ten thousand people, with {vaccinated:%} vaccinated. Each infected person passes the infection on at a rate that makes R0 = {R0} new cases in a fully susceptible town, and stays infectious for about {days} days. Model assumptions: everyone mixes evenly, recovery gives lasting immunity, the town is closed, and the hospital line is compared with everyone infected at once, as if each case needed a bed.",
+  "sources": [
+    {
+      "title": "Kermack and McKendrick, A contribution to the mathematical theory of epidemics (1927)",
+      "url": "https://doi.org/10.1098/rspa.1927.0118"
+    },
+    { "title": "Fine, Eames and Heymann, Herd Immunity: A Rough Guide (2011)", "url": "https://doi.org/10.1093/cid/cir007" }
+  ],
+  "timeUnit": "days",
+  "dt": 0.1,
+  "duration": 240,
+  "seed": 1,
+  "params": [
+    { "id": "R0", "label": "R0 (basic reproduction number)", "min": 0.5, "max": 4, "step": 0.1, "default": 2.5 },
+    { "id": "days", "label": "Days infectious", "min": 3, "max": 14, "step": 1, "default": 7, "unit": "days" },
+    { "id": "vaccinated", "label": "Vaccinated before the outbreak", "min": 0, "max": 0.9, "step": 0.05, "default": 0.4, "format": "%" },
+    {
+      "id": "beds",
+      "label": "Hospital line",
+      "min": 100,
+      "max": 2000,
+      "step": 100,
+      "default": 500,
+      "unit": "people",
+      "help": "How many people can be sick at once before care runs short."
+    }
+  ],
+  "state": {
+    "N": 10000,
+    "startI": 10,
+    "V": "round(vaccinated * 10000)",
+    "S": "10000 - round(vaccinated * 10000) - 10",
+    "I": 10,
+    "R": 0,
+    "peakI": 10,
+    "peaked": false,
+    "S0": "S"
+  },
+  "derived": {
+    "Reff": "R0 * S / N",
+    "immune": "(R + V) / N",
+    "cells": "fill(round(V / N * 100), 'V') + fill(round(R / N * 100), 'R') + fill(round(I / N * 100), 'I') + fill(max(0, 100 - round(V / N * 100) - round(R / N * 100) - round(I / N * 100)), 'S')"
+  },
+  "rules": {
+    "tick": [
+      "let infections = R0 / days * S * I / N * dt",
+      "let recoveries = I / days * dt",
+      "let nextI = I + infections - recoveries",
+      "if not peaked and I > startI and nextI < I {",
+      "  peaked = true",
+      "  emit('peak', S / N)",
+      "}",
+      "S -= infections",
+      "I = nextI",
+      "R += recoveries",
+      "peakI = max(peakI, I)"
+    ]
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    {
+      "id": "town",
+      "type": "grid",
+      "at": [0, 0, 4, 4],
+      "label": "The town",
+      "cells": "cells",
+      "cols": 10,
+      "showValues": false,
+      "tones": { "S": "soft", "I": "bad", "R": "ok", "V": "info" }
+    },
+    {
+      "id": "reff",
+      "type": "gauge",
+      "at": [4, 0, 4, 2],
+      "label": "Effective R",
+      "value": "Reff",
+      "max": 4,
+      "format": ".2",
+      "zones": [{ "from": 0, "to": 1, "tone": "ok" }, { "from": 1, "to": 4, "tone": "bad" }]
+    },
+    {
+      "id": "sick",
+      "type": "counter",
+      "at": [8, 0, 4, 2],
+      "label": "Infected now",
+      "value": "I",
+      "format": "int",
+      "tone": "I > beds ? 'bad' : 'ink'"
+    },
+    { "id": "peak", "type": "counter", "at": [4, 2, 4, 2], "label": "Peak so far", "value": "peakI", "format": "int" },
+    { "id": "imm", "type": "counter", "at": [8, 2, 4, 2], "label": "Immune", "value": "immune", "format": "%", "tone": "ok" },
+    {
+      "id": "curve",
+      "type": "chart",
+      "at": [0, 4, 6, 4],
+      "label": "Infected",
+      "series": [{ "expr": "I", "label": "infected", "tone": "bad" }],
+      "refs": [{ "y": "beds", "label": "hospital line", "tone": "warn" }]
+    },
+    {
+      "id": "shares",
+      "type": "chart",
+      "at": [6, 4, 6, 4],
+      "label": "Share of the town",
+      "series": [{ "expr": "S / N", "label": "susceptible", "tone": "info" }, { "expr": "(R + V) / N", "label": "immune", "tone": "ok" }],
+      "y": [0, 1],
+      "refs": [{ "y": "1 / R0", "label": "1 / R0" }]
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 30,
+      "text": "The outbreak starts with {startI} infected people. Each passes it to {Reff:.2} others on average, because only {S / N:%} of the town can still catch it. Each square is one percent of the town.",
+      "cites": ["threshold", "final-size"]
+    },
+    {
+      "from": 30,
+      "to": 120,
+      "text": "Infected now: {I:int}. Effective R is {Reff:.2}. When it drops below one, new cases fall behind recoveries and the curve turns.",
+      "cites": ["peak-at-threshold", "under-the-line"]
+    },
+    {
+      "from": 120,
+      "to": 240,
+      "text": "The outbreak fades. {S / N:%} of the town never caught it: the infection ran out of people to reach.",
+      "cites": ["some-escape"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "threshold",
+      "kind": "sweep",
+      "text": "An outbreak grows only when R0 times the share still susceptible is above 1.",
+      "samples": 32,
+      "vary": ["R0", "vaccinated"],
+      "holdsWhen": "R0 * S / N > 1",
+      "claim": { "kind": "eventually", "expr": "I > startI" }
+    },
+    {
+      "id": "peak-at-threshold",
+      "kind": "whenever",
+      "event": "peak",
+      "expr": "abs(payload - 1 / R0) < 0.01",
+      "text": "The infection curve turns over when the susceptible share has fallen to 1/R0: from then on, each case causes less than one new case."
+    },
+    {
+      "id": "under-the-line",
+      "kind": "always",
+      "expr": "I <= beds",
+      "text": "With {vaccinated:%} vaccinated, the number sick at once never passes the hospital line of {beds}."
+    },
+    {
+      "id": "final-size",
+      "kind": "always",
+      "expr": "abs(S - S0 * exp(-R0 * R / N)) < 0.01 * N",
+      "text": "How many have recovered fixes how many can still catch it: S = S0 × e^(−R0 × R / N) at every moment, Kermack and McKendrick's law, to within one percent of the town."
+    },
+    {
+      "id": "some-escape",
+      "kind": "at",
+      "t": 240,
+      "expr": "I < startI and S >= 1",
+      "text": "The outbreak burns out before the run ends, and people are left who never caught it."
+    }
+  ]
+}

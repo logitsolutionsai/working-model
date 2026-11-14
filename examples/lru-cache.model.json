@@ -1,0 +1,206 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "lru-cache",
+  "title": "LRU Cache",
+  "summary": "A cache with {capacity} slots keeps the most recently used keys and evicts the least recently used one when it is full. A program loops over {workingSet} hot keys, then a one-time scan of {scan} new keys passes through.",
+  "sources": [
+    {
+      "title": "Cache replacement policies: Least recently used (Wikipedia)",
+      "url": "https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)"
+    },
+    {
+      "title": "Megiddo and Modha, ARC: A Self-Tuning, Low Overhead Replacement Cache (FAST 2003)",
+      "url": "https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache",
+      "note": "on LRU and scans"
+    },
+    {
+      "title": "Mattson, Gecsei, Slutz and Traiger, Evaluation Techniques for Storage Hierarchies (1970)",
+      "url": "https://doi.org/10.1147/sj.92.0078",
+      "note": "stack algorithms such as LRU"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.25,
+  "duration": 40,
+  "seed": 3,
+  "params": [
+    { "id": "capacity", "label": "Cache slots", "min": 1, "max": 8, "step": 1, "default": 4, "unit": "keys" },
+    { "id": "workingSet", "label": "Hot keys in the loop", "min": 2, "max": 10, "step": 1, "default": 3, "unit": "keys" },
+    { "id": "scan", "label": "One-time scan", "min": 0, "max": 10, "step": 1, "default": 5, "unit": "keys" }
+  ],
+  "events": [{ "name": "access", "every": 1, "from": 1, "until": 40 }],
+  "state": {
+    "hot": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"],
+    "cache": [],
+    "slots": "fill(capacity, '')",
+    "slotMark": -1,
+    "loopPos": 0,
+    "last": "'-'",
+    "lastHit": false,
+    "hits": 0,
+    "misses": 0,
+    "hotCached": 0,
+    "recent": []
+  },
+  "derived": { "accesses": "hits + misses", "hitRate": "accesses > 0 ? hits / accesses : 0" },
+  "rules": {
+    "on": {
+      "access": [
+        "let key = ''",
+        "if t > 20 and t <= 20 + scan {",
+        "  key = 'x' + str(round(t - 20))",
+        "} else {",
+        "  key = hot[loopPos % workingSet]",
+        "  loopPos += 1",
+        "}",
+        "last = key",
+        "remove(recent, key)",
+        "unshift(recent, key)",
+        "if contains(cache, key) {",
+        "  remove(cache, key)",
+        "  unshift(cache, key)",
+        "  hits += 1",
+        "  lastHit = true",
+        "  slotMark = indexOf(slots, key)",
+        "  emit('hit', key)",
+        "} else {",
+        "  misses += 1",
+        "  lastHit = false",
+        "  emit('miss', key)",
+        "  let slot = indexOf(slots, '')",
+        "  if len(cache) >= capacity {",
+        "    let old = pop(cache)",
+        "    if len(old) == 1 { hotCached -= 1 }",
+        "    slot = indexOf(slots, old)",
+        "    emit('evict', old)",
+        "  }",
+        "  slots[slot] = key",
+        "  slotMark = slot",
+        "  unshift(cache, key)",
+        "  if len(key) == 1 { hotCached += 1 }",
+        "}"
+      ]
+    }
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    {
+      "id": "request",
+      "type": "box",
+      "at": [0, 0, 3, 2],
+      "label": "Request",
+      "text": "key {last}",
+      "tone": "lastHit ? 'ok' : 'bad'",
+      "pulse": "access"
+    },
+    {
+      "id": "recency",
+      "type": "queue",
+      "at": [4, 0, 8, 2],
+      "label": "Recency order",
+      "items": "cache",
+      "slots": "capacity",
+      "ends": ["most recent", "evicted next"]
+    },
+    { "id": "origin", "type": "box", "at": [0, 2, 3, 2], "label": "Origin", "text": "{misses} fetches", "pulse": "miss" },
+    { "id": "slots", "type": "grid", "at": [4, 2, 4, 2], "label": "Cache slots", "cells": "slots", "mark": "slotMark" },
+    { "id": "rate", "type": "gauge", "at": [8, 2, 4, 2], "label": "Hit rate", "value": "hitRate", "max": 1, "format": "%" },
+    { "id": "ask", "type": "link", "from": "request", "to": "recency", "on": ["hit", "miss"], "tone": { "hit": "ok", "miss": "bad" } },
+    { "id": "fill", "type": "link", "from": "origin", "to": "slots", "on": "miss", "tone": "accent", "after": "ask" },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 4, 12, 4],
+      "label": "Hit rate so far",
+      "series": [{ "expr": "hitRate", "label": "hit rate", "tone": "ok" }],
+      "y": [0, 1]
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 6,
+      "text": "The program loops over {workingSet} hot keys. The first touch of each one misses and is fetched from the origin.",
+      "cites": ["fits-then-hits", "no-belady"]
+    },
+    {
+      "from": 6,
+      "to": 20,
+      "text": "With {capacity} slots, the whole loop fits, so every repeat is a hit. Hit rate so far: {hitRate:%}.",
+      "cites": ["fits-then-hits", "loop-too-big"]
+    },
+    {
+      "from": 20,
+      "to": 27,
+      "text": "A scan of {scan} new keys passes through once. Each new key evicts the least recently used one, and the hot keys are the oldest.",
+      "cites": ["keeps-most-recent", "scan-flushes"]
+    },
+    {
+      "from": 27,
+      "to": 40,
+      "text": "The scan keys are never used again, but they pushed the hot keys out, so the loop misses until it has refilled the cache.",
+      "cites": ["scan-costs-twice", "scan-flushes"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "fits-then-hits",
+      "kind": "at",
+      "t": 20,
+      "expr": "misses == workingSet and hits == t - workingSet",
+      "text": "While the loop fits in the cache, only the first touch of each key misses; every repeat is a hit."
+    },
+    {
+      "id": "loop-too-big",
+      "kind": "sweep",
+      "text": "A loop over more keys than the cache holds gets no hits at all: each key is evicted just before it comes round again.",
+      "samples": 30,
+      "vary": ["capacity", "workingSet"],
+      "holdsWhen": "workingSet > capacity",
+      "claim": { "kind": "at", "t": 20, "expr": "hits == 0" }
+    },
+    {
+      "id": "no-belady",
+      "kind": "compare",
+      "a": { "capacity": "workingSet" },
+      "b": { "capacity": "workingSet - 1" },
+      "measure": { "of": "hits", "agg": "final", "label": "hits in the run" },
+      "expect": "a >= b",
+      "text": "One more slot never means fewer hits: a loop of {workingSet} keys gets its hits back with {workingSet} slots, against none with one slot fewer. LRU is a stack algorithm, so it has no Belady anomaly."
+    },
+    {
+      "id": "scan-costs-twice",
+      "kind": "at",
+      "t": 40,
+      "expr": "misses == 2 * workingSet + scan",
+      "text": "The scan costs more than its own {scan} misses: afterwards the loop misses all {workingSet} hot keys again while it refills the cache."
+    },
+    {
+      "id": "keeps-most-recent",
+      "kind": "always",
+      "expr": "sorted(cache) == sorted(slice(recent, 0, capacity))",
+      "text": "The cache always holds the {capacity} most recently used keys (every key used so far, until it fills), so each eviction takes the key used longest ago. A hit moves its key to the front: when the scan starts evicting, the hot key used just before it is the last one to go."
+    },
+    {
+      "id": "scan-flushes",
+      "kind": "at",
+      "t": "20 + scan",
+      "expr": "hotCached == 0",
+      "text": "A one-time scan of {scan} new keys pushes every hot key out of the cache."
+    }
+  ],
+  "mutate": {
+    "ignore": [
+      {
+        "mutant": "rules.on.access:3:27 t - 20 → t + 20",
+        "reason": "Only renames the scan keys. Any names the loop never uses behave the same."
+      },
+      { "mutant": "rules.on.access:3:29 20 → 21", "reason": "Only renames the scan keys. Any names the loop never uses behave the same." },
+      { "mutant": "rules.on.access:3:29 20 → 19", "reason": "Only renames the scan keys. Any names the loop never uses behave the same." },
+      {
+        "mutant": "rules.on.access:6:11 loopPos += 1 → loopPos -= 1",
+        "reason": "The loop visits the hot keys in the opposite order. LRU treats every cyclic order the same way."
+      }
+    ]
+  }
+}

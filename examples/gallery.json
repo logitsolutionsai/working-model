@@ -1,0 +1,3 @@
+{
+  "order": ["token-bucket", "backoff-jitter", "lru-cache", "tcp-aimd", "circuit-breaker", "sir-epidemic", "load-balancing", "compound-interest", "bloom-filter", "raft-election", "reorder-point"]
+}

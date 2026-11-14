@@ -1,0 +1,17 @@
+{
+  "name": "working-model",
+  "description": "Working Model: interactive explainers whose claims are checked by simulation.",
+  "owner": {
+    "name": "Logit Solutions AI",
+    "url": "https://github.com/logitsolutionsai"
+  },
+  "plugins": [
+    {
+      "name": "working-model",
+      "source": "./",
+      "description": "Ask how anything works and get a working model: an animated, interactive explainer page where every claim is a passing test.",
+      "category": "learning",
+      "tags": ["explainer", "simulation", "visualization"]
+    }
+  ]
+}

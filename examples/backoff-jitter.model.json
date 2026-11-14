@@ -1,0 +1,164 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "backoff-jitter",
+  "title": "Exponential Backoff With and Without Jitter",
+  "summary": "{clients} clients lose their server at the same moment. Each retries after a wait that doubles every failure, capped at {cap} seconds. With jitter, each wait is a random share of that limit, which breaks up the herd of synchronized retries.",
+  "sources": [
+    {
+      "title": "Exponential Backoff And Jitter (AWS Architecture Blog, 2015)",
+      "url": "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/"
+    },
+    {
+      "title": "Timeouts, retries, and backoff with jitter (Amazon Builders' Library)",
+      "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.025,
+  "duration": 10,
+  "seed": 11,
+  "params": [
+    { "id": "clients", "label": "Clients", "min": 1, "max": 40, "step": 1, "default": 20 },
+    {
+      "id": "jitter",
+      "label": "Jitter",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "default": 1,
+      "help": "0 waits the full backoff; 1 waits a random time up to it (full jitter)."
+    },
+    { "id": "cap", "label": "Longest wait", "min": 0.5, "max": 4, "step": 0.25, "default": 2, "unit": "s" },
+    { "id": "capacity", "label": "Server capacity", "min": 40, "max": 400, "step": 40, "default": 160, "unit": "per s" }
+  ],
+  "state": {
+    "base": 0.1,
+    "outage": 2,
+    "nextTry": "fill(clients, 0)",
+    "attempts": "fill(clients, 0)",
+    "status": "fill(clients, 1)",
+    "trying": [],
+    "retries": 0,
+    "done": 0,
+    "totalAttempts": 0
+  },
+  "derived": { "up": "t >= outage", "perTick": "capacity * dt" },
+  "rules": {
+    "tick": [
+      "trying = []",
+      "retries = 0",
+      "let served = 0",
+      "for i in range(clients) {",
+      "  if nextTry[i] >= 0 and nextTry[i] <= t + 0.000001 {",
+      "    push(trying, i)",
+      "    if attempts[i] > 0 { retries += 1 }",
+      "  }",
+      "}",
+      "for i in trying {",
+      "  totalAttempts += 1",
+      "  emit('attempt')",
+      "  if up and served < perTick {",
+      "    served += 1",
+      "    done += 1",
+      "    nextTry[i] = -1",
+      "    status[i] = 2",
+      "    emit('success')",
+      "  } else {",
+      "    attempts[i] += 1",
+      "    let limit = min(cap, base * 2 ** (attempts[i] - 1))",
+      "    let wait = limit * (1 - jitter) + rand(0, limit * jitter)",
+      "    nextTry[i] = t + max(dt, wait)",
+      "    status[i] = 1",
+      "    emit('fail', wait)",
+      "  }",
+      "}"
+    ]
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    {
+      "id": "herd",
+      "type": "grid",
+      "at": [0, 0, 4, 4],
+      "label": "Clients",
+      "cells": "status",
+      "mark": "trying",
+      "tones": { "1": "warn", "2": "ok" },
+      "showValues": false
+    },
+    { "id": "server", "type": "lamp", "at": [6, 0, 3, 2], "label": "Server", "on": "up", "text": "{up ? 'back up' : 'down'}" },
+    { "id": "now", "type": "counter", "at": [9, 0, 3, 2], "label": "Retries now", "value": "retries" },
+    { "id": "through", "type": "counter", "at": [6, 2, 3, 2], "label": "Got through", "value": "done", "tone": "ok" },
+    { "id": "tries", "type": "counter", "at": [9, 2, 3, 2], "label": "Attempts", "value": "totalAttempts" },
+    { "id": "send", "type": "link", "from": "herd", "to": "server", "on": "attempt", "tone": "accent" },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 4, 12, 4],
+      "label": "Retries landing in the same instant",
+      "series": [{ "expr": "retries", "label": "retries", "tone": "warn" }],
+      "refs": [{ "y": "ceil(clients / 2)", "label": "half the clients" }],
+      "step": true
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 0.6,
+      "text": "All {clients} clients send a request and the server is down, so every one fails at the same moment.",
+      "cites": ["through-sooner"]
+    },
+    {
+      "from": 0.6,
+      "to": 2,
+      "text": "Each client waits before retrying, and the wait doubles after every failure. With jitter at {jitter:%}, the waits differ from client to client.",
+      "cites": ["spread-out", "jitter-cuts-peak"]
+    },
+    {
+      "from": 2,
+      "to": 10,
+      "text": "The server is back. No wait is longer than {cap} seconds, so every client tries again soon. {done} of {clients} clients are through; {retries} retried in this instant.",
+      "cites": ["recovers-fast", "within-one-cap"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "jitter-cuts-peak",
+      "kind": "compare",
+      "text": "Full jitter lowers the peak number of retries that land in the same instant, compared with no jitter.",
+      "a": { "jitter": 1 },
+      "b": { "jitter": 0 },
+      "measure": { "of": "retries", "agg": "max", "label": "peak retries in one instant" },
+      "expect": "a < b"
+    },
+    {
+      "id": "spread-out",
+      "kind": "always",
+      "expr": "retries <= ceil(clients / 2)",
+      "text": "With jitter, retries do not pile up: in this run, at most half the clients retry in the same instant."
+    },
+    {
+      "id": "recovers-fast",
+      "kind": "eventually",
+      "by": 6,
+      "expr": "done == clients",
+      "text": "Within four seconds of the server coming back, every client has got through."
+    },
+    {
+      "id": "through-sooner",
+      "kind": "compare",
+      "a": { "jitter": 1 },
+      "b": { "jitter": 0 },
+      "measure": { "of": "done", "agg": "mean", "label": "clients through, on average over the run" },
+      "expect": "a > b",
+      "text": "Full jitter also gets the clients through sooner, on average, than no jitter does."
+    },
+    {
+      "id": "within-one-cap",
+      "kind": "eventually",
+      "by": "2 + cap + 0.05",
+      "expr": "done == clients",
+      "text": "Once the server is back, every client gets through within one longest wait, {cap} seconds: the cap bounds every wait, as long as the server has room for the retries that arrive together."
+    }
+  ]
+}

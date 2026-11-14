@@ -1,0 +1,180 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "circuit-breaker",
+  "title": "Circuit Breaker",
+  "summary": "A client calls a service five times a second through a circuit breaker. At first every other call fails, but never two in a row. After {threshold} failures in a row the breaker opens and fails calls at once, without touching the service. After a cooldown of {cooldown} seconds it lets one trial call through (half-open): success closes it, failure opens it again. This breaker counts failures in a row, not the failure rate, so scattered failures never trip it; many libraries count failures over a time window instead.",
+  "sources": [
+    { "title": "Martin Fowler, CircuitBreaker (2014)", "url": "https://martinfowler.com/bliki/CircuitBreaker.html" },
+    {
+      "title": "Circuit Breaker pattern (Azure Architecture Center)",
+      "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.05,
+  "duration": 30,
+  "seed": 1,
+  "params": [
+    { "id": "threshold", "label": "Failures to trip", "min": 1, "max": 10, "step": 1, "default": 5 },
+    { "id": "cooldown", "label": "Cooldown", "min": 0.5, "max": 8, "step": 0.5, "default": 4, "unit": "s" },
+    { "id": "outage", "label": "Outage length", "min": 2, "max": 16, "step": 1, "default": 12, "unit": "s" }
+  ],
+  "events": [{ "name": "request", "every": 0.2, "from": 0.2, "until": 30 }, { "name": "recover", "at": "5 + outage" }],
+  "state": { "mode": "'closed'", "failStreak": 0, "openedAt": -100, "calls": 0, "fastFails": 0, "outageCalls": 0, "outageRequests": 0, "errors": 0 },
+  "derived": { "failing": "t >= 5 and t < 5 + outage", "healthy": "not failing", "glitch": "t < 4.7 and round(t / 0.2) % 2 == 1" },
+  "rules": {
+    "on": {
+      "request": [
+        "if failing { outageRequests += 1 }",
+        "if mode == 'open' and t - openedAt >= cooldown {",
+        "  mode = 'half-open'",
+        "}",
+        "if mode == 'open' {",
+        "  fastFails += 1",
+        "  emit('fast-fail')",
+        "} else {",
+        "  calls += 1",
+        "  if failing { outageCalls += 1 }",
+        "  emit('call')",
+        "  if healthy and not glitch {",
+        "    failStreak = 0",
+        "    emit('ok')",
+        "    if mode == 'half-open' {",
+        "      mode = 'closed'",
+        "      emit('close', 'half-open')",
+        "    }",
+        "  } else {",
+        "    failStreak += 1",
+        "    errors += 1",
+        "    emit('error')",
+        "    if mode == 'half-open' or failStreak >= threshold {",
+        "      emit('trip', mode)",
+        "      mode = 'open'",
+        "      openedAt = t",
+        "    }",
+        "  }",
+        "}"
+      ]
+    }
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    { "id": "client", "type": "box", "at": [0, 0, 3, 2], "label": "Client", "text": "{calls + fastFails} requests" },
+    {
+      "id": "breaker",
+      "type": "node",
+      "at": [4, 0, 4, 2],
+      "label": "Breaker",
+      "state": "mode",
+      "states": [
+        { "id": "closed", "label": "closed", "tone": "ok" },
+        { "id": "open", "label": "open", "tone": "bad" },
+        { "id": "half-open", "label": "half-open", "tone": "warn" }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "lamp",
+      "at": [9, 0, 3, 2],
+      "label": "Service",
+      "on": "healthy and not glitch",
+      "text": "{failing ? 'failing' : glitch ? 'call failed' : 'healthy'}",
+      "pulse": "error"
+    },
+    { "id": "reached", "type": "counter", "at": [4, 2, 4, 2], "label": "Calls during outage", "value": "outageCalls" },
+    { "id": "spared", "type": "counter", "at": [0, 2, 3, 2], "label": "Failed fast", "value": "fastFails", "tone": "warn" },
+    { "id": "streak", "type": "counter", "at": [9, 2, 3, 2], "label": "Failure streak", "value": "failStreak" },
+    {
+      "id": "to-breaker",
+      "type": "link",
+      "from": "client",
+      "to": "breaker",
+      "on": ["call", "fast-fail"],
+      "tone": { "call": "accent", "fast-fail": "warn" }
+    },
+    {
+      "id": "to-service",
+      "type": "link",
+      "from": "breaker",
+      "to": "service",
+      "on": ["ok", "error"],
+      "tone": { "ok": "accent", "error": "bad" },
+      "after": "to-breaker"
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 4, 12, 4],
+      "label": "Failures in a row",
+      "series": [{ "expr": "failStreak", "label": "streak", "tone": "bad" }],
+      "refs": [{ "y": "threshold", "label": "trip threshold", "tone": "bad" }],
+      "y": [0, "threshold + 1"],
+      "step": true
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 5,
+      "text": "Every other call fails, but never two in a row, so the failure streak keeps falling back to zero and the breaker stays closed.",
+      "cites": ["ignores-scattered"]
+    },
+    {
+      "from": 5,
+      "to": 9,
+      "text": "The service starts failing. After {threshold} failures in a row the breaker opens, and calls now fail at once.",
+      "cites": ["opens-quickly", "spares-service"]
+    },
+    {
+      "from": 9,
+      "to": 17,
+      "text": "Every {cooldown} seconds the breaker lets one trial call through. While the service is still failing, the trial fails and the breaker opens again.",
+      "cites": ["spares-service", "one-trial-per-cooldown"]
+    },
+    {
+      "from": 17,
+      "to": 30,
+      "text": "The service is back. The next trial call succeeds and the breaker closes.",
+      "cites": ["closes-after-recovery"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "ignores-scattered",
+      "kind": "at",
+      "t": 4.9,
+      "expr": "openedAt < 0 and errors * 2 == calls and errors >= threshold",
+      "text": "Scattered failures never trip it: before the outage every other call fails, {threshold} or more in all, but never two in a row, so the breaker never opens. It counts failures in a row, not the failure rate."
+    },
+    {
+      "id": "opens-quickly",
+      "kind": "eventually",
+      "from": 5,
+      "by": "5 + threshold * 0.2",
+      "expr": "mode == 'open' and outageCalls == threshold",
+      "text": "Once the service fails, the breaker opens after {threshold} failed calls, within {threshold * 0.2:.1} seconds."
+    },
+    {
+      "id": "spares-service",
+      "kind": "at",
+      "t": 30,
+      "expr": "outageCalls < outageRequests / 4",
+      "text": "During the outage, fewer than a quarter of the requests reach the failing service."
+    },
+    {
+      "id": "one-trial-per-cooldown",
+      "kind": "at",
+      "t": 30,
+      "expr": "outageCalls > threshold and outageCalls <= threshold + ceil(outage / cooldown)",
+      "text": "While the service is down it gets {threshold} failed calls, then trial calls: at least one, and at most one per {cooldown}-second cooldown."
+    },
+    {
+      "id": "closes-after-recovery",
+      "kind": "whenever",
+      "event": "recover",
+      "within": "cooldown + 0.25",
+      "expr": "mode == 'closed'",
+      "text": "After the service recovers, the breaker closes again within one cooldown period, plus the wait for the next call."
+    }
+  ]
+}

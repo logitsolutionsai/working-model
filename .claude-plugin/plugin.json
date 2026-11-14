@@ -1,0 +1,14 @@
+{
+  "name": "working-model",
+  "displayName": "Working Model",
+  "version": "0.1.0",
+  "description": "Ask how anything works and get a working model: an animated, interactive explainer page where every claim is a passing test.",
+  "author": {
+    "name": "Logit Solutions AI",
+    "url": "https://github.com/logitsolutionsai"
+  },
+  "homepage": "https://github.com/logitsolutionsai/working-model",
+  "repository": "https://github.com/logitsolutionsai/working-model",
+  "license": "MIT",
+  "keywords": ["explainer", "simulation", "interactive", "visualization", "education", "testing"]
+}

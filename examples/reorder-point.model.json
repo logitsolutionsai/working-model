@@ -1,0 +1,108 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "reorder-point",
+  "title": "Inventory Reorder Point",
+  "summary": "A shop sells {demand} units a day. When stock on hand plus stock on order falls to the reorder point of {reorder} units, it orders {qty} more, which arrive {lead} days later. Sales that find the shelf empty are lost.",
+  "sources": [
+    {
+      "title": "Silver, Pyke and Thomas, Inventory and Production Management in Supply Chains, 4th ed., chapter 6 (order-point, order-quantity systems)"
+    },
+    { "title": "Reorder point (Wikipedia)", "url": "https://en.wikipedia.org/wiki/Reorder_point" }
+  ],
+  "timeUnit": "days",
+  "dt": 0.1,
+  "duration": 60,
+  "seed": 3,
+  "params": [
+    { "id": "demand", "label": "Daily demand", "min": 2, "max": 20, "step": 1, "default": 10, "unit": "units" },
+    { "id": "lead", "label": "Lead time", "min": 1, "max": 10, "step": 1, "default": 4, "unit": "days" },
+    { "id": "reorder", "label": "Reorder point", "min": 0, "max": 150, "step": 5, "default": 50, "unit": "units" },
+    { "id": "qty", "label": "Order size", "min": 20, "max": 200, "step": 10, "default": 100, "unit": "units" }
+  ],
+  "state": { "onHand": "reorder + qty", "dueTick": [], "dueQty": [], "lost": 0, "emptyTime": 0, "orders": 0 },
+  "derived": { "onOrder": "sum(dueQty)", "position": "onHand + onOrder", "leadDemand": "demand * lead" },
+  "rules": {
+    "tick": [
+      "# deliveries that are due",
+      "while len(dueTick) > 0 and dueTick[0] <= tick {",
+      "  onHand = round(onHand + dueQty[0], 6)",
+      "  shift(dueTick); shift(dueQty)",
+      "  emit(\"arrive\")",
+      "}",
+      "# stock is rounded to a millionth so 0.7 + 0.7 + ... lands exactly on the reorder point",
+      "let want = round(demand * dt, 6)",
+      "let sold = min(want, onHand)",
+      "onHand = round(onHand - sold, 6)",
+      "if sold < want { lost += want - sold; emptyTime += dt }",
+      "if onHand + sum(dueQty) <= reorder {",
+      "  push(dueTick, tick + round(lead / dt)); push(dueQty, qty)",
+      "  orders += 1",
+      "  emit(\"order\", onHand)",
+      "}"
+    ]
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    {
+      "id": "shelf",
+      "type": "tank",
+      "at": [0, 0, 3, 4],
+      "label": "On the shelf",
+      "level": "clamp(onHand / (reorder + qty), 0, 1)",
+      "text": "{onHand:int} units"
+    },
+    { "id": "order", "type": "box", "at": [4, 0, 3, 2], "label": "On order", "text": "{onOrder:int} units", "pulse": "order" },
+    { "id": "supplier", "type": "box", "at": [9, 0, 3, 2], "label": "Supplier", "text": "{lead} days away" },
+    { "id": "lost", "type": "counter", "at": [4, 3, 4, 1], "label": "Lost sales", "value": "lost", "format": "int" },
+    { "id": "orders", "type": "counter", "at": [9, 3, 3, 1], "label": "Orders", "value": "orders", "format": "int" },
+    { "id": "to-supplier", "type": "link", "from": "order", "to": "supplier", "on": "order" },
+    { "id": "to-shelf", "type": "link", "from": "supplier", "to": "shelf", "on": "arrive", "via": [[10.5, 2.6], [3.6, 2.6]] },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 5, 12, 3],
+      "label": "Stock on the shelf",
+      "series": [{ "expr": "onHand", "label": "on hand", "tone": "accent" }, { "expr": "position", "label": "on hand + on order", "tone": "muted" }],
+      "refs": [{ "y": "reorder", "label": "reorder point" }]
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 5,
+      "text": "The shelf starts topped up with {reorder + qty} units and sells {demand} a day.",
+      "cites": ["no-stockout"]
+    },
+    {
+      "from": 5,
+      "to": 20,
+      "text": "When stock falls to {reorder} units an order goes out; {lead} days of selling use {leadDemand} units before it lands.",
+      "cites": ["no-stockout", "covers-lead-time"]
+    },
+    {
+      "from": 20,
+      "to": 60,
+      "text": "Orders so far: {orders}. Units lost to an empty shelf: {lost:int}.",
+      "cites": ["no-stockout", "order-rhythm"]
+    }
+  ],
+  "claims": [
+    { "id": "no-stockout", "kind": "never", "expr": "lost > 0", "text": "With a reorder point of {reorder} units, no sale is ever lost." },
+    {
+      "id": "covers-lead-time",
+      "kind": "sweep",
+      "vary": { "demand": [5, 20], "lead": [1, 10], "reorder": [0, 150], "qty": [20, 200] },
+      "samples": 60,
+      "holdsWhen": "reorder >= demand * lead",
+      "claim": { "kind": "never", "expr": "lost > 0" },
+      "text": "Whatever the order size, no sale is lost exactly when the reorder point covers the demand over the lead time."
+    },
+    {
+      "id": "order-rhythm",
+      "kind": "at",
+      "t": 60,
+      "expr": "lost > 0 or abs(orders - demand * t / qty) <= 1",
+      "text": "While no sale is lost, the shop orders once every {qty / demand:.1} days, the time it takes to sell one order."
+    }
+  ]
+}

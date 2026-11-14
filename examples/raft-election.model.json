@@ -1,0 +1,270 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "raft-election",
+  "title": "Raft Leader Election",
+  "summary": "Five servers. A follower that hears nothing from a leader for its election timeout, a random time between 150 and {150 + spread} ms, becomes a candidate and asks the others for votes; a majority makes it leader. Messages take {latency} ms. At t = 1 s the leader crashes. Log replication is left out.",
+  "sources": [
+    {
+      "title": "Ongaro and Ousterhout, In Search of an Understandable Consensus Algorithm (Raft), USENIX ATC 2014",
+      "url": "https://raft.github.io/raft.pdf",
+      "note": "section 5.2, leader election, and figure 2"
+    }
+  ],
+  "timeUnit": "s",
+  "dt": 0.005,
+  "duration": 3,
+  "seed": 4,
+  "params": [
+    {
+      "id": "spread",
+      "label": "Timeout randomness",
+      "min": 0,
+      "max": 300,
+      "step": 10,
+      "default": 150,
+      "unit": "ms",
+      "help": "Timeouts are drawn from 150 ms to 150 ms plus this."
+    },
+    { "id": "latency", "label": "Message delay", "min": 5, "max": 60, "step": 5, "default": 10, "unit": "ms" },
+    { "id": "beat", "label": "Heartbeat every", "min": 20, "max": 200, "step": 10, "default": 50, "unit": "ms" }
+  ],
+  "events": [{ "name": "crash", "at": 1 }],
+  "state": {
+    "n": 5,
+    "role": "fill(5, 'follower')",
+    "term": "fill(5, 0)",
+    "votedFor": "fill(5, -1)",
+    "votes": "fill(5, 0)",
+    "deadline": "fill(5, 0)",
+    "nextBeat": 0,
+    "msgs": [],
+    "elections": 0,
+    "electedTerms": [],
+    "doubleLeader": 0,
+    "lastElectedAt": -1,
+    "challenges": 0
+  },
+  "derived": { "leaders": "count(role, 'leader')", "alive": "5 - count(role, 'down')", "maxTerm": "max(term)" },
+  "rules": {
+    "init": ["for i in range(n) { deadline[i] = round((0.15 + rand() * spread / 1000) / dt) }"],
+    "tick": [
+      "let hop = max(1, round(latency / 1000 / dt))",
+      "# deliver the messages that are due",
+      "let due = []",
+      "let later = []",
+      "for m in msgs { if m[0] <= tick { push(due, m) } else { push(later, m) } }",
+      "msgs = later",
+      "for m in due {",
+      "  let kind = m[1]",
+      "  let from = m[2]",
+      "  let to = m[3]",
+      "  let mt = m[4]",
+      "  if role[to] == 'down' { continue }",
+      "  if mt > term[to] { term[to] = mt; votedFor[to] = -1; if role[to] != 'follower' { role[to] = 'follower' } }",
+      "  if kind == 'ask' {",
+      "    let grant = mt == term[to] and (votedFor[to] == -1 or votedFor[to] == from)",
+      "    if grant {",
+      "      votedFor[to] = from",
+      "      deadline[to] = tick + round((0.15 + rand() * spread / 1000) / dt)",
+      "    }",
+      "    push(msgs, [tick + hop, 'reply', to, from, term[to], grant])",
+      "  } else if kind == 'reply' {",
+      "    if role[to] == 'candidate' and mt == term[to] and m[5] {",
+      "      votes[to] += 1",
+      "      if votes[to] > n / 2 {",
+      "        role[to] = 'leader'",
+      "        if contains(electedTerms, term[to]) { doubleLeader += 1 }",
+      "        push(electedTerms, term[to])",
+      "        lastElectedAt = t",
+      "        nextBeat = tick",
+      "        emit('elected', term[to])",
+      "      }",
+      "    }",
+      "  } else if kind == 'beat' {",
+      "    if mt == term[to] {",
+      "      if role[to] == 'candidate' { role[to] = 'follower' }",
+      "      deadline[to] = tick + round((0.15 + rand() * spread / 1000) / dt)",
+      "    }",
+      "  }",
+      "}",
+      "# election timeouts",
+      "for i in range(n) {",
+      "  if role[i] == 'follower' or role[i] == 'candidate' {",
+      "    if tick >= deadline[i] {",
+      "      if count(role, 'leader') > 0 and t < 1 { challenges += 1 }",
+      "      role[i] = 'candidate'",
+      "      term[i] += 1",
+      "      votedFor[i] = i",
+      "      votes[i] = 1",
+      "      elections += 1",
+      "      deadline[i] = tick + round((0.15 + rand() * spread / 1000) / dt)",
+      "      for j in range(n) { if j != i { push(msgs, [tick + hop, 'ask', i, j, term[i], false]) } }",
+      "      emit('campaign', i)",
+      "    }",
+      "  }",
+      "}",
+      "# heartbeats from the leader",
+      "if tick >= nextBeat {",
+      "  for i in range(n) {",
+      "    if role[i] == 'leader' {",
+      "      for j in range(n) { if j != i { push(msgs, [tick + hop, 'beat', i, j, term[i], false]) } }",
+      "    }",
+      "  }",
+      "  nextBeat = tick + round(beat / 1000 / dt)",
+      "}"
+    ],
+    "on": { "crash": ["for i in range(n) { if role[i] == 'leader' { role[i] = 'down' } }"] }
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    {
+      "id": "s1",
+      "type": "node",
+      "at": [0, 0, 2, 2],
+      "label": "S1",
+      "state": "role[0]",
+      "states": [
+        { "id": "follower", "tone": "muted" },
+        { "id": "candidate", "tone": "warn" },
+        { "id": "leader", "tone": "ok" },
+        { "id": "down", "tone": "bad" }
+      ]
+    },
+    {
+      "id": "s2",
+      "type": "node",
+      "at": [2, 0, 2, 2],
+      "label": "S2",
+      "state": "role[1]",
+      "states": [
+        { "id": "follower", "tone": "muted" },
+        { "id": "candidate", "tone": "warn" },
+        { "id": "leader", "tone": "ok" },
+        { "id": "down", "tone": "bad" }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "node",
+      "at": [4, 0, 2, 2],
+      "label": "S3",
+      "state": "role[2]",
+      "states": [
+        { "id": "follower", "tone": "muted" },
+        { "id": "candidate", "tone": "warn" },
+        { "id": "leader", "tone": "ok" },
+        { "id": "down", "tone": "bad" }
+      ]
+    },
+    {
+      "id": "s4",
+      "type": "node",
+      "at": [6, 0, 2, 2],
+      "label": "S4",
+      "state": "role[3]",
+      "states": [
+        { "id": "follower", "tone": "muted" },
+        { "id": "candidate", "tone": "warn" },
+        { "id": "leader", "tone": "ok" },
+        { "id": "down", "tone": "bad" }
+      ]
+    },
+    {
+      "id": "s5",
+      "type": "node",
+      "at": [8, 0, 2, 2],
+      "label": "S5",
+      "state": "role[4]",
+      "states": [
+        { "id": "follower", "tone": "muted" },
+        { "id": "candidate", "tone": "warn" },
+        { "id": "leader", "tone": "ok" },
+        { "id": "down", "tone": "bad" }
+      ]
+    },
+    { "id": "term", "type": "counter", "at": [10, 0, 2, 2], "label": "Term", "value": "maxTerm", "format": "int" },
+    {
+      "id": "terms",
+      "type": "grid",
+      "at": [0, 2, 10, 2],
+      "label": "Term per server",
+      "cells": "term",
+      "cols": 5,
+      "tones": { "0": "muted" }
+    },
+    {
+      "id": "elections",
+      "type": "counter",
+      "at": [10, 2, 2, 2],
+      "label": "Elections",
+      "value": "elections",
+      "format": "int",
+      "pulse": "campaign"
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 4, 12, 4],
+      "label": "Leaders and candidates",
+      "step": true,
+      "series": [
+        { "expr": "leaders", "label": "leaders", "tone": "ok" },
+        { "expr": "count(role, 'candidate')", "label": "candidates", "tone": "warn" }
+      ],
+      "y": [0, 5]
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 0.5,
+      "text": "Nobody is leader yet. The first follower whose timeout runs out starts an election for term 1.",
+      "cites": ["one-leader-per-term", "first-leader"]
+    },
+    {
+      "from": 0.5,
+      "to": 1,
+      "text": "The leader's heartbeats every {beat} ms keep resetting the followers' timeouts.",
+      "cites": ["one-leader-per-term", "heartbeats-hold"]
+    },
+    {
+      "from": 1,
+      "to": 3,
+      "text": "The leader crashed. Term is now {maxTerm}; {elections} elections so far.",
+      "cites": ["re-elected", "randomness-matters", "one-leader-per-term"]
+    }
+  ],
+  "claims": [
+    { "id": "one-leader-per-term", "kind": "never", "expr": "doubleLeader > 0", "text": "Two servers are never leader in the same term." },
+    {
+      "id": "heartbeats-hold",
+      "kind": "never",
+      "expr": "challenges > 0",
+      "text": "The leader's heartbeats, every {beat} ms, keep every follower from starting an election until the crash."
+    },
+    {
+      "id": "first-leader",
+      "kind": "eventually",
+      "by": 1,
+      "expr": "leaders == 1",
+      "text": "In this run, a leader is elected well before the crash."
+    },
+    {
+      "id": "re-elected",
+      "kind": "whenever",
+      "event": "crash",
+      "within": "(150 + spread + 6 * latency) / 1000",
+      "expr": "leaders == 1",
+      "text": "In this run, a new leader takes over after the crash within the longest timeout ({150 + spread} ms) plus three round trips ({6 * latency} ms)."
+    },
+    {
+      "id": "randomness-matters",
+      "kind": "compare",
+      "a": {},
+      "b": { "spread": 0 },
+      "measure": { "of": "elections", "agg": "final", "label": "elections in the run" },
+      "expect": "a < b",
+      "text": "Random timeouts need fewer elections than identical ones, which split the vote again and again."
+    }
+  ]
+}

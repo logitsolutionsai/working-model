@@ -1,0 +1,2630 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logitsolutionsai/working-model/schema/model.schema.json",
+  "title": "working-model spec",
+  "description": "A small discrete-time model with visual parts, captions and claims that are checked by simulation.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "description": "Short kebab-case id.",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Page title.",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "description": "One or two sentences under the title. May use {param} holes."
+    },
+    "sources": {
+      "type": "array",
+      "description": "Where the key facts come from.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "timeUnit": {
+      "type": "string",
+      "description": "Unit of model time shown in the page, such as \"s\", \"day\", \"RTT\", \"year\"."
+    },
+    "dt": {
+      "type": "number",
+      "description": "Length of one tick in model time.",
+      "exclusiveMinimum": 0
+    },
+    "duration": {
+      "type": "number",
+      "description": "Total model time simulated.",
+      "exclusiveMinimum": 0
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Seed for rand() and random events (default 1)."
+    },
+    "params": {
+      "type": "array",
+      "description": "Sliders.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Name used in expressions.",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+          },
+          "label": {
+            "type": "string",
+            "description": "Slider label."
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "step": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "default": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "help": {
+            "type": "string",
+            "description": "One-line help under the slider."
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "description": "Names for each step from min to max; the page shows buttons instead of a slider."
+          },
+          "format": {
+            "type": "string",
+            "description": "How the value is shown, such as \"%\" for 0.4 as 40%, \".2\", \",\" or \"int\"."
+          }
+        },
+        "required": [
+          "id",
+          "min",
+          "max",
+          "default"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "state": {
+      "type": "object",
+      "description": "Starting values: numbers, true/false, lists, or expression strings (use quotes inside for text, such as \"'closed'\").",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+      },
+      "additionalProperties": {
+        "type": [
+          "number",
+          "boolean",
+          "string",
+          "array"
+        ]
+      }
+    },
+    "derived": {
+      "type": "object",
+      "description": "Named expressions recomputed from state at every moment.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,39}$"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "The scenario: when things happen.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Event name; rules.on.<name> handles it.",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,39}$"
+          },
+          "at": {
+            "description": "One time, a list of times, or an expression.",
+            "type": [
+              "number",
+              "string",
+              "array"
+            ],
+            "items": {
+              "type": "number"
+            }
+          },
+          "every": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Period of a repeating event. A number, or an expression over params."
+          },
+          "rate": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Random arrivals per unit of time (Poisson, seeded). A number, or an expression over params."
+          },
+          "from": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "First time for every/rate (default 0). A number, or an expression over params."
+          },
+          "until": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Last time for every/rate (default: end of run). A number, or an expression over params."
+          },
+          "count": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "How many fire at each occurrence (a burst). Default 1. A number, or an expression over params."
+          },
+          "label": {
+            "type": "string",
+            "description": "Name shown on the timeline."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "object",
+      "properties": {
+        "init": {
+          "description": "Runs once at t = 0 after state is set. Rule code: one string, or an array of lines.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tick": {
+          "description": "Runs every tick, before that tick's events. Rule code: one string, or an array of lines.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "on": {
+          "type": "object",
+          "description": "Event handlers by event name.",
+          "additionalProperties": {
+            "description": "Handler. Rule code: one string, or an array of lines.",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "cols": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 24
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 24
+        }
+      },
+      "additionalProperties": false
+    },
+    "parts": {
+      "type": "array",
+      "description": "Visual parts bound to the model.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "box",
+              "tank",
+              "queue",
+              "stack",
+              "grid",
+              "counter",
+              "gauge",
+              "lamp",
+              "node",
+              "link",
+              "chart",
+              "label",
+              "group"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "box"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_box"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "tank"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_tank"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "queue"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_queue"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "stack"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_stack"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "grid"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_grid"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "counter"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_counter"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "gauge"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_gauge"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "lamp"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_lamp"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "node"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_node"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "link"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_link"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "chart"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_chart"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "label"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_label"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "group"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/part_group"
+            }
+          }
+        ]
+      }
+    },
+    "narration": {
+      "type": "array",
+      "description": "Captions shown during playback.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "number",
+            "description": "Start time."
+          },
+          "to": {
+            "type": "number",
+            "description": "End time (default: next caption)."
+          },
+          "text": {
+            "type": "string",
+            "description": "Caption text with live {expression} holes."
+          },
+          "cites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Claim ids this caption relies on."
+          }
+        },
+        "required": [
+          "from",
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "claims": {
+      "type": "array",
+      "description": "Statements checked by simulation.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "at",
+              "always",
+              "never",
+              "eventually",
+              "whenever",
+              "sweep",
+              "compare"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "at"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_at"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "always"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_always"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "never"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_never"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "eventually"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_eventually"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "whenever"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_whenever"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "sweep"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_sweep"
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "compare"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/claim_compare"
+            }
+          }
+        ]
+      }
+    },
+    "playback": {
+      "type": "object",
+      "properties": {
+        "speed": {
+          "type": "number",
+          "description": "Model time per second of playback (default: duration / 15).",
+          "exclusiveMinimum": 0
+        },
+        "autoplay": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "lint": {
+      "type": "object",
+      "properties": {
+        "allowNumbers": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Numbers allowed as literals in text."
+        }
+      },
+      "additionalProperties": false
+    },
+    "mutate": {
+      "type": "object",
+      "description": "Settings for check --mutate.",
+      "properties": {
+        "ignore": {
+          "type": "array",
+          "description": "Surviving mutants that are truly harmless, each with the reason. They are left out of the mutation score.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mutant": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The mutant as check --mutate prints it: location and change, such as \"rules.tick:1:8 t > 12 → t >= 12\"."
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Why no claim can or should notice this change."
+              }
+            },
+            "required": [
+              "mutant",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 50000000,
+          "description": "Rule steps allowed per simulation (default 2000000)."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "title",
+    "dt",
+    "duration",
+    "state",
+    "parts",
+    "claims"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "part_box": {
+      "type": "object",
+      "description": "A box part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "box"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "text": {
+          "type": "string",
+          "description": "Template text shown inside, such as \"{accepted} served\"."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at"
+      ],
+      "additionalProperties": false
+    },
+    "part_tank": {
+      "type": "object",
+      "description": "A tank part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "tank"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "level": {
+          "type": "string",
+          "description": "Fill level from 0 to 1. An expression in the rule language."
+        },
+        "text": {
+          "type": "string",
+          "description": "Template text under the level."
+        },
+        "expect": {
+          "type": "string",
+          "description": "An independent expression the shown value must equal at every tick at the default params; check reports E_BINDING_EXPECT when they differ. An expression in the rule language."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "level"
+      ],
+      "additionalProperties": false
+    },
+    "part_queue": {
+      "type": "object",
+      "description": "A queue part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "queue"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "items": {
+          "type": "string",
+          "description": "A list; each item becomes a chip, head first. An expression in the rule language."
+        },
+        "slots": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Number of slots drawn. A number, or an expression over params."
+        },
+        "ends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Captions for the two ends, such as [\"most recent\", \"evicted next\"]."
+        },
+        "showValues": {
+          "type": "boolean",
+          "description": "Write each item in its chip (default true)."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "part_stack": {
+      "type": "object",
+      "description": "A stack part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "stack"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "items": {
+          "type": "string",
+          "description": "A list drawn bottom-up. An expression in the rule language."
+        },
+        "slots": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Number of slots drawn. A number, or an expression over params."
+        },
+        "ends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Captions for the bottom and top."
+        },
+        "showValues": {
+          "type": "boolean",
+          "description": "Write each item in its chip (default true)."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "part_grid": {
+      "type": "object",
+      "description": "A grid part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "grid"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "cells": {
+          "type": "string",
+          "description": "A list of cell values. An expression in the rule language."
+        },
+        "cols": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Cells per row (default: as square as possible)."
+        },
+        "tones": {
+          "type": "object",
+          "description": "Map from a cell value (as text) to a tone.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "showValues": {
+          "type": "boolean",
+          "description": "Write each value in its cell (default true)."
+        },
+        "mark": {
+          "type": "string",
+          "description": "An index or list of indexes to ring. An expression in the rule language."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "cells"
+      ],
+      "additionalProperties": false
+    },
+    "part_counter": {
+      "type": "object",
+      "description": "A counter part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "counter"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "value": {
+          "type": "string",
+          "description": "The number shown. An expression in the rule language."
+        },
+        "format": {
+          "type": "string",
+          "description": "Number format such as \".1\", \"%\", \",\", \"int\", \"ord\"."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit text after the number."
+        },
+        "expect": {
+          "type": "string",
+          "description": "An independent expression the shown value must equal at every tick at the default params; check reports E_BINDING_EXPECT when they differ. An expression in the rule language."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "part_gauge": {
+      "type": "object",
+      "description": "A gauge part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "gauge"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "value": {
+          "type": "string",
+          "description": "The needle value. An expression in the rule language."
+        },
+        "min": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Dial minimum (default 0). A number, or an expression over params."
+        },
+        "max": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Dial maximum. A number, or an expression over params."
+        },
+        "format": {
+          "type": "string",
+          "description": "Number format."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit text."
+        },
+        "expect": {
+          "type": "string",
+          "description": "An independent expression the shown value must equal at every tick at the default params; check reports E_BINDING_EXPECT when they differ. An expression in the rule language."
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "number"
+              },
+              "to": {
+                "type": "number"
+              },
+              "tone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "tone"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "value",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "part_lamp": {
+      "type": "object",
+      "description": "A lamp part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "lamp"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "on": {
+          "type": "string",
+          "description": "Lit while true. An expression in the rule language."
+        },
+        "text": {
+          "type": "string",
+          "description": "Template text beside the lamp."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "on"
+      ],
+      "additionalProperties": false
+    },
+    "part_node": {
+      "type": "object",
+      "description": "A node part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "node"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "state": {
+          "type": "string",
+          "description": "Returns the id of the active state. An expression in the rule language."
+        },
+        "states": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "tone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "state",
+        "states"
+      ],
+      "additionalProperties": false
+    },
+    "part_link": {
+      "type": "object",
+      "description": "A link part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "link"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A tone, or a map from signal name to tone.",
+          "type": [
+            "string",
+            "object"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "from": {
+          "type": "string",
+          "description": "Part id where the arrow starts."
+        },
+        "to": {
+          "type": "string",
+          "description": "Part id the arrow points at."
+        },
+        "on": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "via": {
+          "type": "array",
+          "description": "Bend points as [col, row] grid positions.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "travel": {
+          "type": "number",
+          "description": "Seconds of model time a particle takes to cross (default: about 0.7 s of playback).",
+          "exclusiveMinimum": 0
+        },
+        "active": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw solid while true, dashed while false."
+        },
+        "after": {
+          "type": "string",
+          "description": "Id of another link: particles start when they reach the end of that link, so flows chain."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "part_chart": {
+      "type": "object",
+      "description": "A chart part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "chart"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "series": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "expr": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "tone": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expr"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "y": {
+          "type": "array",
+          "description": "[min, max] of the y axis; numbers or param expressions (default: fitted).",
+          "items": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "y": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "tone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "y"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "step": {
+          "type": "boolean",
+          "description": "Draw as steps instead of straight segments."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "series"
+      ],
+      "additionalProperties": false
+    },
+    "part_label": {
+      "type": "object",
+      "description": "A label part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "label"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "text": {
+          "type": "string",
+          "description": "Template text."
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "size": {
+          "enum": [
+            "s",
+            "m",
+            "l"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "part_group": {
+      "type": "object",
+      "description": "A group part.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique part id, used by links.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "type": {
+          "const": "group"
+        },
+        "label": {
+          "type": "string",
+          "description": "Small caption drawn with the part."
+        },
+        "visible": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: draw the part only while this is true."
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "description": "Expression: ring the part in the accent colour while true."
+        },
+        "pulse": {
+          "description": "Event or emit() name(s).",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "tone": {
+          "description": "A colour token (ink, muted, accent, ok, bad, warn, soft, info), a #rrggbb colour, or an expression that returns one.",
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "description": "Free text for authors; not shown."
+        },
+        "at": {
+          "type": "array",
+          "description": "[column, row, width, height] on the layout grid, in whole cells.",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "at"
+      ],
+      "additionalProperties": false
+    },
+    "claim_at": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "at"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "t": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "The moment to check. A number, or an expression over params."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must be true at time t. An expression in the rule language."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "t",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "claim_always": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "always"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must be true at every tick. An expression in the rule language."
+        },
+        "from": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Start of the checked window. A number, or an expression over params."
+        },
+        "until": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "End of the checked window. A number, or an expression over params."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "claim_never": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "never"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must be false at every tick. An expression in the rule language."
+        },
+        "from": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Start of the checked window. A number, or an expression over params."
+        },
+        "until": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "End of the checked window. A number, or an expression over params."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "claim_eventually": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "eventually"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must become true at some tick. An expression in the rule language."
+        },
+        "from": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Earliest time that counts. A number, or an expression over params."
+        },
+        "by": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Deadline (default: end of run). A number, or an expression over params."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "claim_whenever": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "whenever"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "event": {
+          "type": "string",
+          "description": "Event or emit() name."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Checked right after each firing (payload holds the emit payload). An expression in the rule language."
+        },
+        "within": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "If set: expr must become true within this much time instead. A number, or an expression over params."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "event",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "claim_sweep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "sweep"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "samples": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 400,
+          "description": "Number of sampled param sets (default 24)."
+        },
+        "vary": {
+          "description": "Params to sample: a list of ids (whole slider range) or a map id -> [min, max].",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          ]
+        },
+        "claim": {
+          "description": "The claim checked on every sample.",
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "at"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/inner_at"
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "always"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/inner_always"
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "never"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/inner_never"
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "eventually"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/inner_eventually"
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "whenever"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/inner_whenever"
+              }
+            }
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "at",
+                "always",
+                "never",
+                "eventually",
+                "whenever"
+              ]
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "holdsWhen": {
+          "type": "string",
+          "description": "Param condition (checked at t = 0 of each sample): the claim must hold inside it and fail outside it. An expression in the rule language."
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "Sampling seed (default: derived from the model seed and claim id)."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "claim"
+      ],
+      "additionalProperties": false
+    },
+    "claim_compare": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique claim id, cited by captions.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,59}$"
+        },
+        "kind": {
+          "const": "compare"
+        },
+        "text": {
+          "type": "string",
+          "description": "The plain sentence readers see. May use {param} holes."
+        },
+        "note": {
+          "type": "string",
+          "description": "Author note; not shown."
+        },
+        "a": {
+          "type": "object",
+          "description": "Param overrides for run a.",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "b": {
+          "type": "object",
+          "description": "Param overrides for run b.",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "measure": {
+          "type": "object",
+          "properties": {
+            "of": {
+              "type": "string",
+              "description": "Expression measured at every tick."
+            },
+            "agg": {
+              "enum": [
+                "max",
+                "min",
+                "mean",
+                "final",
+                "sum",
+                "at"
+              ]
+            },
+            "t": {
+              "type": [
+                "number",
+                "string"
+              ],
+              "description": "Time for agg \"at\". A number, or an expression over params."
+            },
+            "label": {
+              "type": "string",
+              "description": "Name shown in counterexamples, such as \"peak retry load\"."
+            }
+          },
+          "required": [
+            "of"
+          ],
+          "additionalProperties": false
+        },
+        "expect": {
+          "type": "string",
+          "description": "Compares the two measures, named a and b, such as \"a < b\". An expression in the rule language."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "text",
+        "a",
+        "b",
+        "measure",
+        "expect"
+      ],
+      "additionalProperties": false
+    },
+    "inner_at": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "at"
+        },
+        "t": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "The moment to check. A number, or an expression over params."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must be true at time t. An expression in the rule language."
+        }
+      },
+      "required": [
+        "kind",
+        "t",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "inner_always": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "always"
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must be true at every tick. An expression in the rule language."
+        },
+        "from": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Start of the checked window. A number, or an expression over params."
+        },
+        "until": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "End of the checked window. A number, or an expression over params."
+        }
+      },
+      "required": [
+        "kind",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "inner_never": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "never"
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must be false at every tick. An expression in the rule language."
+        },
+        "from": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Start of the checked window. A number, or an expression over params."
+        },
+        "until": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "End of the checked window. A number, or an expression over params."
+        }
+      },
+      "required": [
+        "kind",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "inner_eventually": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "eventually"
+        },
+        "expr": {
+          "type": "string",
+          "description": "Must become true at some tick. An expression in the rule language."
+        },
+        "from": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Earliest time that counts. A number, or an expression over params."
+        },
+        "by": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "Deadline (default: end of run). A number, or an expression over params."
+        }
+      },
+      "required": [
+        "kind",
+        "expr"
+      ],
+      "additionalProperties": false
+    },
+    "inner_whenever": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "whenever"
+        },
+        "event": {
+          "type": "string",
+          "description": "Event or emit() name."
+        },
+        "expr": {
+          "type": "string",
+          "description": "Checked right after each firing (payload holds the emit payload). An expression in the rule language."
+        },
+        "within": {
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "If set: expr must become true within this much time instead. A number, or an expression over params."
+        }
+      },
+      "required": [
+        "kind",
+        "event",
+        "expr"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

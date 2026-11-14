@@ -1,0 +1,156 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "compound-interest",
+  "title": "Compound vs Simple Interest",
+  "summary": "Two accounts start with the same deposit and earn {rate:%} a year, paid {perYear == 1 ? 'once' : str(perYear) + ' times'} a year. Simple interest pays only on the original deposit; compound interest also pays on the interest already earned, so its payments keep growing.",
+  "sources": [
+    {
+      "title": "Investor.gov: Compound Interest Calculator and definitions (US SEC)",
+      "url": "https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator"
+    },
+    { "title": "Rule of 72 (Wikipedia)", "url": "https://en.wikipedia.org/wiki/Rule_of_72" }
+  ],
+  "timeUnit": "years",
+  "dt": 0.0833333333333333,
+  "duration": 30,
+  "seed": 1,
+  "params": [
+    { "id": "rate", "label": "Interest rate", "min": 0.01, "max": 0.4, "step": 0.01, "default": 0.07, "unit": "a year", "format": "%" },
+    {
+      "id": "perYear",
+      "label": "Payments per year",
+      "min": 1,
+      "max": 12,
+      "step": 1,
+      "default": 1,
+      "help": "1 adds interest once a year; 12 adds it monthly."
+    }
+  ],
+  "events": [{ "name": "credit", "every": "1 / perYear", "from": "1 / perYear", "until": 30 }],
+  "state": { "deposit": 1000, "simple": 1000, "compound": 1000, "doubled": false, "doubledAt": 0 },
+  "derived": { "top": "1000 * (1 + rate / perYear) ** (30 * perYear)", "gap": "compound - simple", "ruleOf72": "72 / (rate * 100)" },
+  "rules": {
+    "on": {
+      "credit": [
+        "let before = compound - simple",
+        "simple += deposit * rate / perYear",
+        "compound *= 1 + rate / perYear",
+        "emit('paid', before)",
+        "if not doubled and compound >= 2 * deposit {",
+        "  doubled = true",
+        "  doubledAt = t",
+        "  emit('doubled')",
+        "}"
+      ]
+    }
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    { "id": "accounts", "type": "group", "at": [0, 0, 6, 4], "label": "Same deposit, same rate" },
+    {
+      "id": "simple-tank",
+      "type": "tank",
+      "at": [0, 0, 3, 4],
+      "label": "Simple",
+      "level": "simple / top",
+      "text": "{simple:,.0}",
+      "tone": "warn",
+      "pulse": "paid"
+    },
+    {
+      "id": "compound-tank",
+      "type": "tank",
+      "at": [3, 0, 3, 4],
+      "label": "Compound",
+      "level": "compound / top",
+      "text": "{compound:,.0}",
+      "tone": "accent",
+      "pulse": "paid"
+    },
+    { "id": "lead", "type": "counter", "at": [7, 0, 5, 2], "label": "Compound is ahead by", "value": "gap", "format": ",.0" },
+    {
+      "id": "double",
+      "type": "lamp",
+      "at": [7, 2, 5, 2],
+      "label": "Doubled",
+      "on": "doubled",
+      "text": "{doubled ? 'after ' + str(round(doubledAt, 1)) + ' years' : 'not yet'}",
+      "tone": "ok",
+      "pulse": "doubled"
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 4, 12, 4],
+      "label": "Balance over time",
+      "series": [{ "expr": "simple", "label": "simple", "tone": "warn" }, { "expr": "compound", "label": "compound", "tone": "accent" }],
+      "refs": [{ "y": 2000, "label": "doubled" }],
+      "step": true
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 3,
+      "text": "Both accounts start at {deposit:,.0}. In the first year, both earn interest on the same amount.",
+      "cites": ["same-first-year", "never-less"]
+    },
+    {
+      "from": 3,
+      "to": 12,
+      "text": "Simple interest adds the same {deposit * rate / perYear:,.0} each time. Compound interest adds a share of a balance that keeps growing, so its lead widens: {gap:,.0} now.",
+      "cites": ["lead-grows", "rule-of-72"]
+    },
+    {
+      "from": 12,
+      "to": 30,
+      "text": "The curves bend apart: simple interest grows in a straight line, compound interest grows exponentially. Interest earned so far: {simple - deposit:,.0} against {compound - deposit:,.0}.",
+      "cites": ["twice-the-interest"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "never-less",
+      "kind": "always",
+      "expr": "compound >= simple - 0.000001",
+      "text": "Compound interest never leaves you with less than simple interest at the same rate."
+    },
+    {
+      "id": "same-first-year",
+      "kind": "at",
+      "t": 1,
+      "expr": "abs(compound - simple) < 0.005",
+      "text": "After exactly one year, both accounts hold the same amount."
+    },
+    {
+      "id": "lead-grows",
+      "kind": "whenever",
+      "event": "paid",
+      "expr": "payload == 0 or compound - simple > payload",
+      "text": "After the first payment, the compound account's lead grows with every payment."
+    },
+    {
+      "id": "rule-of-72",
+      "kind": "at",
+      "t": 30,
+      "expr": "72 / (rate * 100) > 29 or (doubled and abs(doubledAt - 72 / (rate * 100)) <= 1)",
+      "text": "Money doubles in about 72 divided by the rate in percent years ({72 / (rate * 100):.1} here), give or take a year, whenever that falls inside the run."
+    },
+    {
+      "id": "twice-the-interest",
+      "kind": "at",
+      "t": 30,
+      "expr": "compound - deposit >= 2 * (simple - deposit)",
+      "text": "Over thirty years, compounding earns more than twice as much interest as simple interest."
+    }
+  ],
+  "lint": { "allowNumbers": [72] },
+  "mutate": {
+    "ignore": [
+      {
+        "mutant": "rules.on.credit:4:1 emit('paid', before) → (removed)",
+        "reason": "This signal is the probe of the lead-grows claim, not part of the mechanism: without it no balance changes, the claim just has nothing left to check."
+      }
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "title": "Counter",
+  "dt": 1,
+  "duration": 10,
+  "seed": 3,
+  "params": [
+    {
+      "id": "step",
+      "label": "Step",
+      "min": 1,
+      "max": 5,
+      "step": 1,
+      "default": 1
+    }
+  ],
+  "state": {
+    "n": 0,
+    "fired": 0
+  },
+  "events": [
+    {
+      "name": "ping",
+      "at": [
+        2,
+        5
+      ]
+    }
+  ],
+  "rules": {
+    "tick": "n += (step",
+    "on": {
+      "ping": [
+        "fired += 1",
+        "emit('pong', n)"
+      ]
+    }
+  },
+  "parts": [
+    {
+      "id": "c",
+      "type": "counter",
+      "at": [
+        0,
+        0,
+        2,
+        2
+      ],
+      "value": "n"
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "text": "Counting up by {step}.",
+      "cites": [
+        "grows"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "grows",
+      "kind": "at",
+      "t": 10,
+      "expr": "n == 10 * step",
+      "text": "After ten ticks n is ten steps."
+    }
+  ]
+}

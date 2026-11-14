@@ -1,0 +1,140 @@
+{
+  "missing-title.model.json": {
+    "codes": [
+      "E_SCHEMA_REQUIRED"
+    ],
+    "path": "(root)"
+  },
+  "wrong-type.model.json": {
+    "codes": [
+      "E_SCHEMA_TYPE"
+    ],
+    "path": "dt"
+  },
+  "unknown-key.model.json": {
+    "codes": [
+      "E_SCHEMA_UNKNOWN_KEY"
+    ],
+    "path": "durration"
+  },
+  "bad-part-type.model.json": {
+    "codes": [
+      "E_SCHEMA_ENUM"
+    ],
+    "path": "parts[0].type"
+  },
+  "bad-claim-kind.model.json": {
+    "codes": [
+      "E_SCHEMA_ENUM"
+    ],
+    "path": "claims[0].kind"
+  },
+  "negative-dt.model.json": {
+    "codes": [
+      "E_SCHEMA_RANGE"
+    ],
+    "path": "dt"
+  },
+  "part-missing-field.model.json": {
+    "codes": [
+      "E_SCHEMA_REQUIRED"
+    ],
+    "path": "parts[0]"
+  },
+  "bad-state-name.model.json": {
+    "codes": [
+      "E_SCHEMA_PATTERN"
+    ],
+    "path": "state.bad name"
+  },
+  "unknown-name.model.json": {
+    "codes": [
+      "E_UNKNOWN_NAME"
+    ],
+    "path": "rules.tick"
+  },
+  "unknown-event-handler.model.json": {
+    "codes": [
+      "E_UNKNOWN_EVENT"
+    ],
+    "path": "rules.on.pang"
+  },
+  "overlapping-parts.model.json": {
+    "codes": [
+      "E_LAYOUT_OVERLAP"
+    ],
+    "path": "parts.d.at"
+  },
+  "outside-grid.model.json": {
+    "codes": [
+      "E_LAYOUT_BOUNDS"
+    ],
+    "path": "parts.c.at"
+  },
+  "link-to-nothing.model.json": {
+    "codes": [
+      "E_UNKNOWN_PART"
+    ],
+    "path": "parts.l.to"
+  },
+  "cites-unknown-claim.model.json": {
+    "codes": [
+      "E_UNKNOWN_CLAIM"
+    ],
+    "path": "narration[0].cites[0]"
+  },
+  "default-out-of-range.model.json": {
+    "codes": [
+      "E_PARAM_RANGE"
+    ],
+    "path": "params[0].default"
+  },
+  "reserved-state-name.model.json": {
+    "codes": [
+      "E_NAME"
+    ],
+    "path": "state.constructor"
+  },
+  "emit-reuses-event-name.model.json": {
+    "codes": [
+      "E_EMIT_NAME"
+    ],
+    "path": "rules"
+  },
+  "whenever-unknown-signal.model.json": {
+    "codes": [
+      "E_UNKNOWN_SIGNAL"
+    ],
+    "path": "claims.w.event"
+  },
+  "impure-binding.model.json": {
+    "codes": [
+      "E_IMPURE"
+    ],
+    "path": "parts.c.value"
+  },
+  "syntax-error.model.json": {
+    "codes": [
+      "E_SYNTAX"
+    ],
+    "path": "rules.tick"
+  },
+  "divides-by-zero.model.json": {
+    "codes": [
+      "E_DIV_ZERO"
+    ],
+    "path": "rules.tick"
+  },
+  "runaway-loop.model.json": {
+    "codes": [
+      "E_STEP_LIMIT"
+    ],
+    "path": "rules.tick"
+  },
+  "invalid-json.model.json": {
+    "codes": [
+      "E_JSON"
+    ],
+    "line": 5
+  }
+}

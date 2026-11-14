@@ -1,0 +1,206 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "load-balancing",
+  "title": "Round Robin vs Least Connections",
+  "summary": "A load balancer spreads random requests over three servers, and one of them works at only {slow:%} of the speed of the others. Round robin takes turns no matter how busy each server is; least connections sends each request to the server with the fewest jobs. Requests arrive at random, about {load} per second, for fifty seconds.",
+  "sources": [
+    {
+      "title": "NGINX documentation: HTTP Load Balancing, load-balancing methods",
+      "url": "https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/"
+    },
+    { "title": "Mitzenmacher, The Power of Two Choices in Randomized Load Balancing (2001)", "url": "https://doi.org/10.1109/71.963420" }
+  ],
+  "timeUnit": "s",
+  "dt": 0.1,
+  "duration": 60,
+  "seed": 5,
+  "params": [
+    { "id": "policy", "label": "Policy", "min": 0, "max": 1, "step": 1, "default": 1, "choices": ["round robin", "least connections"] },
+    { "id": "load", "label": "Arrivals", "min": 0.5, "max": 4, "step": 0.25, "default": 2.5, "unit": "per s" },
+    { "id": "slow", "label": "Speed of the slow server", "min": 0.2, "max": 1, "step": 0.1, "default": 0.4, "format": "%" }
+  ],
+  "events": [{ "name": "request", "rate": "load", "until": 50 }],
+  "state": {
+    "queues": [[], [], []],
+    "speeds": "[1.2, 1.2, 1.2 * slow]",
+    "turn": 0,
+    "arrived": 0,
+    "served": 0,
+    "lens": [0, 0, 0],
+    "picked": -1,
+    "sent": [0, 0, 0],
+    "sizes": [[], [], []],
+    "workIn": 0,
+    "workDone": 0
+  },
+  "derived": { "longest": "max(lens)", "inSystem": "arrived - served" },
+  "rules": {
+    "tick": [
+      "for i in range(3) {",
+      "  let budget = speeds[i] * dt",
+      "  while budget > 0 and len(queues[i]) > 0 {",
+      "    let use = min(budget, queues[i][0])",
+      "    queues[i][0] -= use",
+      "    budget -= use",
+      "    workDone += use",
+      "    if queues[i][0] <= 0.000001 {",
+      "      shift(queues[i])",
+      "      shift(sizes[i])",
+      "      served += 1",
+      "      emit('done', i)",
+      "    }",
+      "  }",
+      "}",
+      "lens = [len(queues[0]), len(queues[1]), len(queues[2])]"
+    ],
+    "on": {
+      "request": [
+        "arrived += 1",
+        "let i = 0",
+        "if policy == 1 {",
+        "  i = indexOf(lens, min(lens))",
+        "} else {",
+        "  i = turn % 3",
+        "  turn += 1",
+        "}",
+        "emit('sent', lens[i] - min(lens))",
+        "if i == 0 { emit('to0') } else if i == 1 { emit('to1') } else { emit('to2') }",
+        "let size = rand(0.5, 1.5)",
+        "push(queues[i], size)",
+        "push(sizes[i], size)",
+        "workIn += size",
+        "lens[i] += 1",
+        "picked = i",
+        "sent[i] += 1"
+      ]
+    }
+  },
+  "layout": { "cols": 12, "rows": 9 },
+  "parts": [
+    {
+      "id": "lb",
+      "type": "node",
+      "at": [2, 0, 8, 2],
+      "label": "Balancer",
+      "state": "policy == 1 ? 'lc' : 'rr'",
+      "states": [{ "id": "rr", "label": "round robin" }, { "id": "lc", "label": "least conn." }]
+    },
+    { "id": "q0", "type": "stack", "at": [0, 3, 4, 2], "label": "Fast server 1", "items": "queues[0]", "slots": 8, "showValues": false },
+    {
+      "id": "q1",
+      "type": "stack",
+      "at": [4, 3, 4, 2],
+      "label": "Fast server 2",
+      "items": "queues[1]",
+      "slots": 8,
+      "showValues": false,
+      "tone": "info"
+    },
+    {
+      "id": "q2",
+      "type": "stack",
+      "at": [8, 3, 4, 2],
+      "label": "Slow server",
+      "items": "queues[2]",
+      "slots": 8,
+      "showValues": false,
+      "tone": "warn"
+    },
+    { "id": "l0", "type": "link", "from": "lb", "to": "q0", "on": "to0" },
+    { "id": "l1", "type": "link", "from": "lb", "to": "q1", "on": "to1", "tone": "info" },
+    { "id": "l2", "type": "link", "from": "lb", "to": "q2", "on": "to2", "tone": "warn" },
+    { "id": "waiting", "type": "counter", "at": [0, 5, 4, 1], "label": "In the system", "value": "inSystem" },
+    { "id": "done", "type": "counter", "at": [4, 5, 4, 1], "label": "Served", "value": "served", "tone": "ok" },
+    {
+      "id": "worst",
+      "type": "counter",
+      "at": [8, 5, 4, 1],
+      "label": "Longest queue",
+      "value": "longest",
+      "tone": "longest > 4 ? 'bad' : 'ink'"
+    },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 6, 12, 3],
+      "label": "Jobs waiting at each server",
+      "series": [
+        { "expr": "lens[0]", "label": "fast 1", "tone": "accent" },
+        { "expr": "lens[1]", "label": "fast 2", "tone": "info" },
+        { "expr": "lens[2]", "label": "slow", "tone": "warn" }
+      ],
+      "step": true
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 15,
+      "text": "Requests arrive at random. Each server works through its queue one job at a time, giving each its full work: a little under a second on a fast server and {1 / (1.2 * slow):.1} seconds on the slow one.",
+      "cites": ["no-job-skipped", "first-come-first-served"]
+    },
+    {
+      "from": 15,
+      "to": 50,
+      "text": "The slow server can finish only {1.2 * slow:.2} jobs a second. Round robin still hands it a third of the traffic, {load / 3:.2} a second, {load / 3 > 1.2 * slow ? 'so its queue keeps growing' : 'which it can just keep up with'}; least connections sends it less.",
+      "cites": ["lc-beats-rr", "short-queues", "rr-a-third"]
+    },
+    { "from": 50, "to": 60, "text": "Arrivals stop. {inSystem} jobs are still waiting.", "cites": ["drains"] }
+  ],
+  "claims": [
+    {
+      "id": "lc-beats-rr",
+      "kind": "compare",
+      "text": "With a slow server in the pool, least connections keeps the longest queue shorter than round robin does.",
+      "a": { "policy": 1 },
+      "b": { "policy": 0 },
+      "measure": { "of": "longest", "agg": "max", "label": "longest queue" },
+      "expect": "a < b"
+    },
+    {
+      "id": "short-queues",
+      "kind": "always",
+      "expr": "longest <= 5",
+      "text": "In this run, no server ever has more than five jobs waiting."
+    },
+    {
+      "id": "drains",
+      "kind": "at",
+      "t": 60,
+      "expr": "inSystem == 0",
+      "text": "Ten seconds after arrivals stop, every request has been served."
+    },
+    {
+      "id": "no-job-skipped",
+      "kind": "always",
+      "expr": "abs(workDone + sum(queues[0]) + sum(queues[1]) + sum(queues[2]) - workIn) < 0.001",
+      "text": "No job is skipped or cut short: at every moment, the work the servers have done plus the work still queued adds up to the work the requests brought in."
+    },
+    {
+      "id": "first-come-first-served",
+      "kind": "always",
+      "expr": "slice(queues[0], 1) == slice(sizes[0], 1) and slice(queues[1], 1) == slice(sizes[1], 1) and slice(queues[2], 1) == slice(sizes[2], 1)",
+      "text": "Each server finishes its jobs in the order they arrived, one at a time: every job behind the one in service is still waiting, untouched, in arrival order."
+    },
+    {
+      "id": "rr-a-third",
+      "kind": "sweep",
+      "samples": 12,
+      "vary": { "policy": [0, 0], "load": [0.5, 4] },
+      "claim": { "kind": "at", "t": 50, "expr": "sum(sent) == arrived and max(sent) - min(sent) <= 1" },
+      "text": "Round robin gives every server its turn, so the slow one gets a third of the requests, whatever the load."
+    }
+  ],
+  "mutate": {
+    "ignore": [
+      {
+        "mutant": "rules.on.request:7:8 turn += 1 → turn -= 1",
+        "reason": "Round robin then visits the servers in the opposite order, which is still round robin."
+      },
+      {
+        "mutant": "rules.on.request:7:11 1 → 2",
+        "reason": "Stepping two servers at a time through three still visits each in turn, which is still round robin."
+      }
+    ]
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "$schema": "../schema/model.schema.json",
+  "id": "tcp-aimd",
+  "title": "TCP AIMD: Two Flows Find a Fair Share",
+  "summary": "Two TCP senders share one bottleneck that carries {capacity} packets per round trip. Each round trip both add one packet to their window (additive increase); when together they overflow the link, both cut their window to {beta:%} of its size (multiplicative decrease). Model assumptions: no buffer, and a loss hits both flows at once.",
+  "sources": [
+    {
+      "title": "Chiu and Jain, Analysis of the Increase and Decrease Algorithms for Congestion Avoidance in Computer Networks (1989)",
+      "url": "https://www.cs.wustl.edu/~jain/papers/ftp/cong_av.pdf"
+    },
+    { "title": "RFC 5681: TCP Congestion Control", "url": "https://www.rfc-editor.org/rfc/rfc5681" }
+  ],
+  "timeUnit": "RTT",
+  "dt": 1,
+  "duration": 100,
+  "seed": 1,
+  "params": [
+    { "id": "capacity", "label": "Link capacity", "min": 20, "max": 80, "step": 2, "default": 40, "unit": "packets" },
+    {
+      "id": "beta",
+      "label": "Decrease factor",
+      "min": 0.3,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.5,
+      "help": "On loss, each window is multiplied by this. TCP Reno halves it.",
+      "format": "%"
+    },
+    { "id": "start1", "label": "Flow 1 starts at", "min": 1, "max": 40, "step": 1, "default": 30, "unit": "packets" },
+    { "id": "start2", "label": "Flow 2 starts at", "min": 1, "max": 40, "step": 1, "default": 2, "unit": "packets" }
+  ],
+  "state": { "w1": "start1", "w2": "start2", "lossNow": false, "losses": 0, "utilSum": 0, "utilCount": 0 },
+  "derived": {
+    "total": "w1 + w2",
+    "util": "min(1, (w1 + w2) / capacity)",
+    "fairness": "(w1 + w2) ** 2 / (2 * (w1 ** 2 + w2 ** 2))",
+    "avgUtil": "utilCount > 0 ? utilSum / utilCount : 0"
+  },
+  "rules": {
+    "tick": [
+      "emit('send1')",
+      "emit('send2')",
+      "lossNow = false",
+      "if w1 + w2 > capacity {",
+      "  lossNow = true",
+      "  losses += 1",
+      "  emit('loss', w1 + w2)",
+      "  w1 = max(1, w1 * beta)",
+      "  w2 = max(1, w2 * beta)",
+      "} else {",
+      "  w1 += 1",
+      "  w2 += 1",
+      "}",
+      "if t > 50 {",
+      "  utilSum += min(1, (w1 + w2) / capacity)",
+      "  utilCount += 1",
+      "}"
+    ]
+  },
+  "layout": { "cols": 12, "rows": 8 },
+  "parts": [
+    { "id": "flow1", "type": "box", "at": [0, 0, 3, 2], "label": "Flow 1", "text": "window {w1:.1}", "tone": "accent" },
+    { "id": "flow2", "type": "box", "at": [0, 2, 3, 2], "label": "Flow 2", "text": "window {w2:.1}", "tone": "warn" },
+    {
+      "id": "link",
+      "type": "tank",
+      "at": [4, 0, 3, 4],
+      "label": "Bottleneck",
+      "level": "util",
+      "text": "{total:int} of {capacity}",
+      "tone": "accent"
+    },
+    { "id": "loss", "type": "lamp", "at": [8, 0, 4, 2], "label": "Packet loss", "on": "lossNow", "tone": "bad", "text": "{losses} so far" },
+    {
+      "id": "fair",
+      "type": "gauge",
+      "at": [8, 2, 4, 2],
+      "label": "Fairness",
+      "value": "fairness",
+      "min": 0.5,
+      "max": 1,
+      "format": ".2",
+      "zones": [{ "from": 0.95, "to": 1, "tone": "ok" }]
+    },
+    { "id": "s1", "type": "link", "from": "flow1", "to": "link", "on": "send1", "tone": "accent" },
+    { "id": "s2", "type": "link", "from": "flow2", "to": "link", "on": "send2", "tone": "warn" },
+    {
+      "id": "chart",
+      "type": "chart",
+      "at": [0, 4, 12, 4],
+      "label": "Congestion windows",
+      "series": [{ "expr": "w1", "label": "flow 1", "tone": "accent" }, { "expr": "w2", "label": "flow 2", "tone": "warn" }],
+      "y": [0, "capacity"],
+      "refs": [{ "y": "capacity / 2", "label": "fair share" }]
+    }
+  ],
+  "narration": [
+    {
+      "from": 0,
+      "to": 5,
+      "text": "Flow 1 starts with a window of {start1} packets and flow 2 with {start2}. Both grow by one packet every round trip.",
+      "cites": []
+    },
+    {
+      "from": 5,
+      "to": 30,
+      "text": "Together they overflow the link and both shrink by the same factor. The gap between them shrinks too, while additive increase keeps it the same.",
+      "cites": ["converges", "any-start"]
+    },
+    {
+      "from": 30,
+      "to": 100,
+      "text": "The windows now saw-tooth together near the fair share of {capacity / 2:int} packets each, and the link runs {avgUtil:%} full on average.",
+      "cites": ["converges", "three-quarters"]
+    }
+  ],
+  "claims": [
+    {
+      "id": "converges",
+      "kind": "eventually",
+      "by": 100,
+      "expr": "abs(w1 - w2) <= 1",
+      "text": "By the end of the run, the two windows are within one packet of each other, whatever the head start."
+    },
+    {
+      "id": "any-start",
+      "kind": "sweep",
+      "text": "For any head start and link size tried, every loss shrinks the gap between the flows, so they end within a twentieth of the link size of each other.",
+      "samples": 24,
+      "vary": ["start1", "start2", "capacity"],
+      "claim": { "kind": "eventually", "by": 100, "expr": "abs(w1 - w2) <= 0.05 * capacity" }
+    },
+    {
+      "id": "three-quarters",
+      "kind": "at",
+      "t": 100,
+      "expr": "abs(avgUtil - (1 + beta) / 2) <= 0.05",
+      "text": "The saw-tooth swings between {beta:%} full and full, so the link is about {(1 + beta) / 2:%} used on average."
+    }
+  ],
+  "lint": { "allowNumbers": [2] }
+}
