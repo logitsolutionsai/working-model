@@ -69,32 +69,29 @@ export async function buildGallery(opts = {}) {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: file:;">
 <title>working-model gallery</title>
 <style>
-:root { color-scheme: light; --paper: #f3eee3; --card: #fbf8f1; --ink: #1a2130; --ink-2: #4b5466; --muted: #8c909a; --line: #2a3242; --shadow: rgba(26,33,48,.10); --accent: #2146c7; --ok: #23774a; --bad: #c0352a; --rule: rgba(36,52,92,.075); --rule-strong: rgba(36,52,92,.13);
+:root { color-scheme: light; --bg: #f7f7f5; --surface: #ffffff; --surface-2: #f0f0ed; --line: #e3e3df; --line-strong: #c9c9c3; --ink: #111110; --ink-2: #3a3a37; --muted: #6f6f69; --accent: #0065FD;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace; }
-@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --paper: #0e131d; --card: #121927; --ink: #ebe6da; --ink-2: #aeb4c2; --muted: #747b8a; --line: #c9cbd2; --shadow: rgba(0,0,0,.35); --accent: #8aa9ff; --ok: #63cf91; --bad: #ff7f6b; --rule: rgba(150,175,255,.055); --rule-strong: rgba(150,175,255,.10); } }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --bg: #0e0e0d; --surface: #171716; --surface-2: #1f1f1d; --line: #2b2b29; --line-strong: #3d3d3a; --ink: #f4f4f2; --ink-2: #d6d6d2; --muted: #9a9a94; --accent: #5b9cff; } }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans);
-  background-image: linear-gradient(var(--rule-strong) 1px, transparent 1px), linear-gradient(90deg, var(--rule-strong) 1px, transparent 1px), linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px; }
-main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 48px; }
-.kicker { font: 600 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+main { max-width: 1240px; margin: 0 auto; padding: 40px 32px 48px; }
+.kicker { font: 600 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 h1 { margin: 8px 0 6px; font: 600 clamp(30px, 4vw, 46px)/1.05 var(--serif); }
-.lede { margin: 0 0 28px; max-width: 68ch; color: var(--ink-2); font-size: 16px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; }
-.card { display: flex; flex-direction: column; background: var(--card); border: 1.5px solid var(--line); border-radius: 6px; box-shadow: 5px 5px 0 var(--shadow); color: inherit; text-decoration: none; overflow: hidden; }
-.card:hover { transform: translate(-1px, -1px); box-shadow: 7px 7px 0 var(--shadow); }
-.card:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 3px; }
-.thumb { aspect-ratio: 16 / 9.6; border-bottom: 1.5px solid var(--line); background: var(--paper); overflow: hidden; }
+.lede { margin: 0 0 32px; max-width: 68ch; color: var(--ink-2); font-size: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+.card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: inherit; text-decoration: none; overflow: hidden; transition: border-color .15s; }
+.card:hover { border-color: var(--line-strong); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.thumb { aspect-ratio: 16 / 9.6; border-bottom: 1px solid var(--line); background: var(--bg); overflow: hidden; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
-.body { padding: 14px 16px 16px; display: grid; gap: 8px; }
+.body { padding: 16px; display: grid; gap: 8px; }
 .card h2 { margin: 0; font: 600 21px/1.2 var(--serif); }
 .card p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
-.stamp { justify-self: start; font: 700 11.5px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ok); border: 1.5px solid var(--ok); border-radius: 6px; padding: 5px 8px; }
-.stamp.fail { color: var(--bad); border-color: var(--bad); }
-.stamps { display: flex; flex-wrap: wrap; gap: 6px; }
-.stamp.mut { color: var(--ink-2); border-color: var(--rule-strong); }
+.chip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font: 600 11.5px/1 var(--mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--muted); }
+.chip.fail { background: var(--ink); color: var(--bg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; }
-.tags span { font: 600 10.5px/1.6 var(--mono); letter-spacing: .04em; color: var(--muted); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 0 6px; }
+.tags span { font: 600 10.5px/1.6 var(--mono); letter-spacing: .04em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }
 footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 520px) { main { padding: 24px 16px 36px; } .grid { grid-template-columns: 1fr; } }
 </style>
@@ -103,14 +100,14 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <main>
 <div class="kicker">working-model</div>
 <h1>Gallery</h1>
-<p class="lede">Each page is a working model: an animation you can scrub and steer, with claims that are re-checked by simulation as you move the sliders. Open one, drag a slider until a claim turns red, and see where the explanation stops holding.</p>
+<p class="lede">Each page is a working model: an animation you can scrub and steer, with claims that are re-checked by simulation as you move the sliders. Open one, drag a slider until a claim fails, and see where the explanation stops holding.</p>
 <div class="grid">
 ${cards.map((c) => `<a class="card" href="${esc(c.name)}.html">
 ${hasThumbs(c) ? `<div class="thumb"><img src="thumbs/${esc(c.name)}.png" alt="Diagram of ${esc(c.title)}" loading="lazy"></div>` : ''}
 <div class="body">
 <h2>${esc(c.title)}</h2>
 <p>${esc(c.summary)}</p>
-<div class="stamps"><span class="stamp${c.passed === c.total ? '' : ' fail'}">${c.passed}/${c.total} claims pass</span>${c.mutationScore != null ? `<span class="stamp mut" data-mutation-score="${c.mutationScore}" title="Share of deliberate bugs in the rules that some claim catches">mutation score ${c.mutationScore}%</span>` : ''}</div>
+<div class="chips"><span class="chip${c.passed === c.total ? '' : ' fail'}" data-passed="${c.passed}" data-total="${c.total}">${c.passed} of ${c.total} claims hold</span>${c.mutationScore != null ? `<span class="chip mut" data-mutation-score="${c.mutationScore}" title="Share of deliberate bugs in the rules that some claim catches">mutation score ${c.mutationScore}%</span>` : ''}</div>
 <div class="tags">${c.kinds.map((k) => `<span>${esc(k)}</span>`).join('')}${c.parts.filter((p) => p !== 'link' && p !== 'label').map((p) => `<span>${esc(p)}</span>`).join('')}</div>
 </div>
 </a>`).join('\n')}

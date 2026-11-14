@@ -3,277 +3,262 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-XSZuKiNje3i86mGE6vGafoNyPshNESC1Cis/1vLPzZE=' 'sha256-u3ZJYuPdm8h3iT9zSyGNHmW0eB/aM+64MgCiMucJ5rs='; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-XSZuKiNje3i86mGE6vGafoNyPshNESC1Cis/1vLPzZE=' 'sha256-0WHpT4QVheyqFJGU+/dNvdzKNESPFMn+ACibS0wNfyM='; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="generator" content="working-model ">
 <title>Circuit Breaker - working model</title>
 <style>
-/* working-model page: an engineering notebook. Paper by day, ink by night. */
+/* working-model page: the Ink system. Warm neutrals carry the structure;
+   status is weight and shape, never hue; one accent marks what you touch. */
 :root {
   color-scheme: light;
-  --paper: #f3eee3;
-  --paper-2: #ece5d6;
-  --card: #fbf8f1;
-  --rule: rgba(36, 52, 92, 0.075);
-  --rule-strong: rgba(36, 52, 92, 0.13);
-  --ink: #1a2130;
-  --ink-2: #4b5466;
-  --muted: #8c909a;
-  --line: #2a3242;
-  --shadow: rgba(26, 33, 48, 0.10);
-  --accent: #2146c7;
-  --accent-soft: rgba(33, 70, 199, 0.12);
-  --ok: #23774a;
-  --ok-soft: rgba(35, 119, 74, 0.12);
-  --bad: #c0352a;
-  --bad-soft: rgba(192, 53, 42, 0.12);
-  --warn: #a8701a;
-  --info: #3d6f8f;
-  --soft: #b9c3d8;
-  --focus: #2146c7;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f0f0ed;
+  --line: #e3e3df;
+  --line-strong: #c9c9c3;
+  --ink: #111110;
+  --ink-2: #3a3a37;
+  --muted: #6f6f69;
+  --faint: #a3a39c;
+  --accent: #0065FD;
+  --accent-press: #0654c8;
+  --accent-soft: rgba(0, 101, 253, 0.10);
+  --on-accent: #ffffff;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #0e131d;
-    --paper-2: #141b28;
-    --card: #121927;
-    --rule: rgba(150, 175, 255, 0.055);
-    --rule-strong: rgba(150, 175, 255, 0.10);
-    --ink: #ebe6da;
-    --ink-2: #aeb4c2;
-    --muted: #747b8a;
-    --line: #c9cbd2;
-    --shadow: rgba(0, 0, 0, 0.35);
-    --accent: #8aa9ff;
-    --accent-soft: rgba(138, 169, 255, 0.16);
-    --ok: #63cf91;
-    --ok-soft: rgba(99, 207, 145, 0.14);
-    --bad: #ff7f6b;
-    --bad-soft: rgba(255, 127, 107, 0.15);
-    --warn: #e7b45a;
-    --info: #79b5d9;
-    --soft: #3a4560;
-    --focus: #8aa9ff;
+    --bg: #0e0e0d; --surface: #171716; --surface-2: #1f1f1d; --line: #2b2b29; --line-strong: #3d3d3a;
+    --ink: #f4f4f2; --ink-2: #d6d6d2; --muted: #9a9a94; --faint: #6a6a65;
+    --accent: #5b9cff; --accent-press: #3f86ff; --accent-soft: rgba(91, 156, 255, 0.14); --on-accent: #0e0e0d;
   }
 }
-:root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #0e131d; --paper-2: #141b28; --card: #121927;
-  --rule: rgba(150, 175, 255, 0.055); --rule-strong: rgba(150, 175, 255, 0.10);
-  --ink: #ebe6da; --ink-2: #aeb4c2; --muted: #747b8a; --line: #c9cbd2; --shadow: rgba(0, 0, 0, 0.35);
-  --accent: #8aa9ff; --accent-soft: rgba(138, 169, 255, 0.16);
-  --ok: #63cf91; --ok-soft: rgba(99, 207, 145, 0.14);
-  --bad: #ff7f6b; --bad-soft: rgba(255, 127, 107, 0.15);
-  --warn: #e7b45a; --info: #79b5d9; --soft: #3a4560; --focus: #8aa9ff;
+  --bg: #0e0e0d; --surface: #171716; --surface-2: #1f1f1d; --line: #2b2b29; --line-strong: #3d3d3a;
+  --ink: #f4f4f2; --ink-2: #d6d6d2; --muted: #9a9a94; --faint: #6a6a65;
+  --accent: #5b9cff; --accent-press: #3f86ff; --accent-soft: rgba(91, 156, 255, 0.14); --on-accent: #0e0e0d;
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background-color: var(--paper);
-  background-image:
-    linear-gradient(var(--rule-strong) 1px, transparent 1px),
-    linear-gradient(90deg, var(--rule-strong) 1px, transparent 1px),
-    linear-gradient(var(--rule) 1px, transparent 1px),
-    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
-  background-position: -1px -1px;
-  color: var(--ink);
-  font: 15px/1.5 var(--sans);
-}
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
 
-.wm { max-width: 1320px; margin: 0 auto; padding: 28px 32px 36px; }
+.wm { max-width: 1320px; margin: 0 auto; padding: 32px 32px 40px; }
 
 /* ---- header ---- */
-.wm-head { display: grid; grid-template-columns: 1fr auto; gap: 8px 32px; align-items: end; margin-bottom: 22px; }
-.wm-kicker { grid-column: 1 / -1; font: 600 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 10px; }
-.wm-kicker::after { content: ""; flex: 0 0 48px; height: 1.5px; background: currentColor; opacity: 0.6; }
+.wm-head { display: grid; grid-template-columns: 1fr auto; gap: 8px 32px; align-items: end; margin-bottom: 24px; }
+.wm-kicker { grid-column: 1 / -1; font: 600 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.wm-kicker::after { content: ""; flex: 0 0 48px; height: 1px; background: var(--line-strong); }
 .wm-title { margin: 2px 0 0; font: 600 clamp(28px, 3.6vw, 42px)/1.08 var(--serif); letter-spacing: -0.01em; color: var(--ink); }
 .wm-summary { grid-column: 1; margin: 6px 0 0; max-width: 72ch; color: var(--ink-2); font-size: 15.5px; }
-.wm-stamp {
+.wm-counter {
   grid-column: 2; grid-row: 2 / span 2; align-self: center;
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 10px 16px 10px 12px; border: 2px solid var(--ok); border-radius: 10px;
-  color: var(--ok); background: var(--ok-soft);
-  font: 700 14px/1 var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
-  transform: rotate(-1.5deg); white-space: nowrap;
-  transition: color .25s, border-color .25s, background-color .25s;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  font: 600 15px/1.2 var(--sans); color: var(--ink); font-variant-numeric: tabular-nums;
 }
-.wm-stamp svg { width: 22px; height: 22px; flex: none; }
-.wm-stamp[data-status="fail"] { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
-.wm-stamp.flip { animation: wm-stamp .5s ease-out; }
-@keyframes wm-stamp { 0% { transform: rotate(-1.5deg) scale(1.12); } 100% { transform: rotate(-1.5deg) scale(1); } }
+.wm-counter .sep { color: var(--faint); }
+
+/* ---- status chips: L3 inverse, L2 outline, L1 quiet, L0 empty ---- */
+.wm-chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px;
+  font: 600 11.5px/1 var(--mono); letter-spacing: 0.02em; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.wm-chip svg { width: 11px; height: 11px; flex: none; }
+.wm-chip.l3 { background: var(--ink); color: var(--bg); }
+.wm-chip.l2 { border: 1.5px solid var(--ink); color: var(--ink); }
+.wm-chip.l1 { background: var(--surface-2); color: var(--muted); }
+.wm-chip.l0 { border: 1px dashed var(--line-strong); color: var(--faint); }
+.wm-counter .wm-chip { height: 24px; font-size: 12px; }
 
 /* ---- main grid ---- */
 .wm-main { display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 24px; align-items: start; }
 .wm-stage { min-width: 0; }
-.wm-side { display: grid; gap: 18px; min-width: 0; }
+.wm-side { display: grid; gap: 16px; min-width: 0; }
 
-.wm-figure {
-  margin: 0; position: relative;
-  background: var(--card); border: 1.5px solid var(--line); border-radius: 6px;
-  box-shadow: 5px 5px 0 var(--shadow);
-  padding: 10px;
-}
-.wm-figure::before {
-  content: ""; position: absolute; inset: 0; border-radius: 5px; pointer-events: none;
-  background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 16px 16px; opacity: 0.9;
-}
+.wm-figure { margin: 0; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .wm-diagram { display: block; width: 100%; height: auto; position: relative; overflow: visible; }
 
 /* ---- caption ---- */
 .wm-caption {
-  margin-top: 12px; min-height: 64px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start;
-  padding: 12px 14px 12px 16px; border: 1.5px solid var(--line); border-left: 4px solid var(--accent); background: var(--card); border-radius: 6px;
-  box-shadow: 3px 3px 0 var(--shadow);
+  margin-top: 12px; min-height: 64px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: start;
+  padding: 12px 16px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px;
 }
-.wm-caption-time { font: 600 11px/1.9 var(--mono); color: var(--accent); white-space: nowrap; letter-spacing: 0.04em; }
+.wm-caption-time { font: 600 11px/1.9 var(--mono); color: var(--muted); white-space: nowrap; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .wm-caption-text { margin: 0; font: 16px/1.5 var(--serif); color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .wm-caption-cites { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; }
-.wm-caption.failing { border-left-color: var(--bad); }
-.wm-caption.failing .wm-caption-time { color: var(--bad); }
+.wm-caption.failing { border-color: var(--ink); }
 .wm-cite {
-  display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 6px; border-radius: 999px;
-  border: 1px solid var(--ok); color: var(--ok); background: transparent;
-  font: 600 11px/1.5 var(--mono); cursor: pointer;
+  appearance: none; display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px 0 7px; border-radius: 999px;
+  border: 0; background: var(--surface-2); color: var(--muted);
+  font: 600 11px/1 var(--mono); cursor: pointer; transition: color .15s, background-color .15s;
 }
-.wm-cite[data-status="fail"] { border-color: var(--bad); color: var(--bad); }
-.wm-cite:hover { background: var(--paper-2); }
+.wm-cite[data-status="fail"] { background: var(--ink); color: var(--bg); }
+.wm-cite:hover { color: var(--accent); }
+.wm-cite[data-status="fail"]:hover { color: var(--bg); background: var(--ink-2); }
 .wm-cite svg { width: 11px; height: 11px; flex: none; }
-.wm-cite-note { grid-column: 2; font: 12.5px/1.4 var(--sans); color: var(--bad); }
+.wm-cite-note { grid-column: 2; font: 12.5px/1.4 var(--sans); color: var(--ink-2); }
 
 /* ---- transport ---- */
 .wm-transport { display: grid; grid-template-columns: auto auto auto 1fr auto auto; align-items: center; gap: 8px; margin-top: 12px; }
 .wm-btn {
   appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-width: 36px; height: 36px; padding: 0 10px; border-radius: 8px;
-  border: 1.5px solid var(--line); background: var(--card); color: var(--ink);
-  font: 600 13px/1 var(--sans); cursor: pointer; box-shadow: 2px 2px 0 var(--shadow);
+  min-width: 36px; height: 36px; padding: 0 10px; border-radius: 6px;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  font: 600 13px/1 var(--sans); cursor: pointer; transition: background-color .15s, border-color .15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.wm-btn:hover { background: var(--paper-2); }
-.wm-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--shadow); }
+.wm-btn:hover { background: var(--surface-2); }
 .wm-btn svg { width: 16px; height: 16px; }
-.wm-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--card); }
-.wm-btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
-.wm-scrubwrap { position: relative; min-width: 0; height: 36px; display: flex; align-items: center; }
-.wm-marks { position: absolute; left: 8px; right: 8px; top: 2px; height: 8px; pointer-events: none; }
-.wm-marks i { position: absolute; top: 0; width: 2px; height: 7px; margin-left: -1px; background: var(--accent); opacity: 0.55; border-radius: 1px; }
+.wm-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.wm-btn.primary:hover { background: var(--accent-press); border-color: var(--accent-press); }
+
+/* The timeline scrubber: a native range input keeps keyboard and screen-reader
+   access; the pointer drags a drawn thumb that rubber-bands past both ends. */
+.wm-scrubwrap { position: relative; min-width: 0; height: 36px; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.wm-scrubwrap .wm-scrub { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; margin: 0; }
+.wm-track { position: absolute; left: 9px; right: 9px; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--line-strong); overflow: hidden; }
+.wm-track-fill { position: absolute; inset: 0; background: var(--ink-2); transform-origin: 0 50%; transform: scaleX(0); }
+.wm-thumb {
+  position: absolute; left: 9px; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--ink-2); pointer-events: none; will-change: transform;
+}
+.wm-scrubwrap[data-pressed] .wm-track-fill { background: var(--accent); }
+.wm-scrubwrap[data-pressed] .wm-thumb { border-color: var(--accent); }
+.wm-scrub:focus-visible ~ .wm-thumb { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+.wm-marks { position: absolute; left: 9px; right: 9px; top: 2px; height: 8px; pointer-events: none; }
+.wm-marks i { position: absolute; top: 0; width: 2px; height: 7px; margin-left: -1px; background: var(--muted); opacity: 0.7; border-radius: 1px; }
 .wm-marks i.band { height: 3px; top: 2px; margin-left: 0; border-radius: 2px; opacity: 0.45; }
-.wm-marks i.cap { background: var(--ink-2); height: 5px; top: 1px; opacity: 0.35; }
+.wm-marks i.cap { background: var(--ink); height: 5px; top: 1px; opacity: 0.5; }
 .wm-clock { font: 600 13px/1 var(--mono); color: var(--ink); white-space: nowrap; min-width: 9ch; text-align: right; font-variant-numeric: tabular-nums; }
-.wm-speed { display: inline-flex; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); box-shadow: 2px 2px 0 var(--shadow); }
-.wm-speed button { appearance: none; border: 0; background: transparent; color: var(--ink-2); font: 600 12px/1 var(--mono); height: 33px; padding: 0 8px; cursor: pointer; }
-.wm-speed button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.wm-speed { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.wm-speed button { appearance: none; border: 0; background: transparent; color: var(--ink-2); font: 600 12px/1 var(--mono); height: 34px; padding: 0 9px; cursor: pointer; transition: background-color .15s, color .15s; -webkit-tap-highlight-color: transparent; }
+.wm-speed button:hover { background: var(--surface-2); }
+.wm-speed button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
 
-input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; background: transparent; margin: 0; cursor: pointer; }
-input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--fill, 0%), var(--rule-strong) var(--fill, 0%)); }
-input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--rule-strong); }
-input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%; background: var(--card); border: 2px solid var(--accent); box-shadow: 1px 1px 0 var(--shadow); }
-input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--card); border: 2px solid var(--accent); }
+/* Parameter sliders stay native. The thumb's scale is a press spring written to --thumb-s. */
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 24px; background: transparent; margin: 0; cursor: pointer; --tk: var(--ink-2); --thumb-s: 1; -webkit-tap-highlight-color: transparent; }
+input[type="range"][data-pressed], input[type="range"]:focus-visible { --tk: var(--accent); }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--tk) var(--fill, 0%), var(--line-strong) var(--fill, 0%)); }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line-strong); }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--tk); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%; background: var(--surface); border: 2px solid var(--tk); transform: scale(var(--thumb-s)); }
+input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 2px solid var(--tk); transform: scale(var(--thumb-s)); }
 
-:focus-visible { outline: 2.5px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+input[type="range"]:focus-visible { outline-offset: 4px; }
 
 /* ---- side panels ---- */
-.wm-panel { background: var(--card); border: 1.5px solid var(--line); border-radius: 6px; box-shadow: 5px 5px 0 var(--shadow); padding: 14px 16px 16px; }
-.wm-panel h2 { margin: 0 0 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font: 700 11px/1.2 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); }
-.wm-panel h2 .n { font-size: 12px; letter-spacing: 0.04em; color: var(--ok); }
-.wm-panel h2 .n.fail { color: var(--bad); }
+.wm-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.wm-panel h2 { margin: 0 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 700 11px/1.2 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.wm-panel h2 .wm-chip { letter-spacing: 0.02em; text-transform: none; }
 
-.wm-claims ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: claim; }
-.wm-claim { display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; padding: 9px 8px 9px 4px; border-radius: 6px; counter-increment: claim; transition: background-color .3s; }
-.wm-claim + .wm-claim { border-top: 1px dashed var(--rule-strong); border-radius: 0; }
-.wm-claim .mark { width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--ok); color: var(--ok); background: var(--ok-soft); }
-.wm-claim .mark svg { width: 13px; height: 13px; }
+.wm-claims ol { list-style: none; margin: 0; padding: 0; display: grid; counter-reset: claim; }
+.wm-claim { display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; padding: 10px 4px; counter-increment: claim; }
+.wm-claim + .wm-claim { border-top: 1px solid var(--line); }
+.wm-claim .mark { width: 22px; height: 22px; margin-top: 0; border-radius: 50%; display: grid; place-items: center; color: var(--muted); will-change: transform, opacity; }
+.wm-claim .mark svg { width: 14px; height: 14px; }
+.wm-claim[data-status="fail"] .mark, .wm-claim[data-status="error"] .mark { background: var(--ink); color: var(--bg); }
+.wm-claim[data-status="fail"] .mark svg, .wm-claim[data-status="error"] .mark svg { width: 11px; height: 11px; }
 .wm-claim .body { min-width: 0; }
 .wm-claim .text { margin: 0; font-size: 14px; line-height: 1.42; color: var(--ink); overflow-wrap: anywhere; }
+.wm-claim[data-status="fail"] .text, .wm-claim[data-status="error"] .text { font-weight: 600; }
 .wm-claim .meta { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font: 600 10.5px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .wm-claim .meta .cid::before { content: "C" counter(claim) " "; color: var(--ink-2); }
-.wm-claim .why { display: none; margin-top: 6px; padding: 6px 8px; border-radius: 5px; background: var(--bad-soft); color: var(--bad); font: 12px/1.45 var(--mono); overflow-wrap: anywhere; }
-.wm-claim .show { display: none; margin-top: 6px; }
-.wm-claim[data-status="fail"] .mark, .wm-claim[data-status="error"] .mark { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
-.wm-claim[data-status="fail"] .why, .wm-claim[data-status="error"] .why { display: block; }
-.wm-claim[data-status="fail"] .show { display: inline-flex; }
-.wm-claim.flip { animation: wm-flip .7s ease-out; }
-.wm-claim.focus { background: var(--accent-soft); }
-@keyframes wm-flip { 0% { background: var(--bad-soft); } 100% { background: transparent; } }
-.wm-claim[data-status="pass"].flip { animation-name: wm-flip-ok; }
-@keyframes wm-flip-ok { 0% { background: var(--ok-soft); } 100% { background: transparent; } }
-.wm-mini { height: 28px; min-width: 0; padding: 0 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--shadow); }
-.wm-reset-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1.5px solid var(--rule-strong); }
+/* The counterexample well opens on a height spring; its content never animates layout. */
+.wm-claim .well { overflow: hidden; }
+.wm-claim .well-in { padding-top: 8px; display: grid; justify-items: start; gap: 8px; }
+.wm-claim .why { width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); font: 12px/1.45 var(--mono); overflow-wrap: anywhere; }
+.wm-claim.focus { background: var(--accent-soft); border-radius: 6px; }
+.wm-mini { height: 28px; min-width: 0; padding: 0 9px; font-size: 12px; }
+.wm-reset-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .wm-reset-row .wm-btn { flex: none; white-space: nowrap; }
 .wm-reset-row p { margin: 0; font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
-.wm-reset-row[hidden] { display: none; }
-.wm-mutation { margin: 12px 0 0; padding-top: 10px; border-top: 1.5px solid var(--rule-strong); font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+.wm-mutation { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
 .wm-mutation strong { color: var(--ink); font-weight: 600; }
 
-.wm-param { padding: 8px 0 6px; }
-.wm-param + .wm-param { border-top: 1px dashed var(--rule-strong); }
+.wm-param { padding: 8px 0; }
+.wm-param + .wm-param { border-top: 1px solid var(--line); }
 .wm-param label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13.5px; color: var(--ink); }
-.wm-param output { font: 600 13px/1 var(--mono); color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.wm-param output.changed::after { content: " *"; color: var(--warn); }
+.wm-param output { font: 600 13px/1 var(--mono); color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wm-param output.changed::after { content: " *"; color: var(--muted); }
 .wm-choice { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.wm-choice button { appearance: none; flex: 1 1 auto; min-height: 32px; padding: 4px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink-2); font: 600 12.5px/1.2 var(--sans); cursor: pointer; }
-.wm-choice button[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.wm-choice button { appearance: none; flex: 1 1 auto; min-height: 32px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); font: 600 12.5px/1.2 var(--sans); cursor: pointer; transition: background-color .15s, border-color .15s, color .15s; -webkit-tap-highlight-color: transparent; }
+.wm-choice button:hover { background: var(--surface-2); }
+.wm-choice button[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .wm-param .help { margin: 0; font-size: 12px; color: var(--muted); }
-.wm-param .range { display: flex; justify-content: space-between; font: 10.5px/1 var(--mono); color: var(--muted); margin-top: -2px; }
+.wm-param .range { display: flex; justify-content: space-between; font: 10.5px/1 var(--mono); color: var(--muted); margin-top: -2px; font-variant-numeric: tabular-nums; }
 
 /* ---- footer ---- */
-.wm-foot { margin-top: 26px; padding-top: 14px; border-top: 1.5px solid var(--rule-strong); display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; font-size: 12.5px; color: var(--ink-2); }
+.wm-foot { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; font-size: 12.5px; color: var(--ink-2); }
 .wm-foot ul { margin: 4px 0 0; padding-left: 18px; }
 .wm-foot a { color: var(--accent); }
 .wm-foot .brand { font: 600 11px/1.6 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: right; }
 .wm-keys { font: 11.5px/1.6 var(--mono); color: var(--muted); }
-kbd { font: 600 10.5px/1 var(--mono); padding: 2px 5px; border: 1px solid var(--rule-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--card); color: var(--ink-2); }
+kbd { font: 600 10.5px/1 var(--mono); padding: 2px 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--surface); color: var(--ink-2); }
 
-.wm-error { margin: 40px auto; max-width: 720px; padding: 18px 20px; border: 2px solid var(--bad); border-radius: 8px; background: var(--card); color: var(--bad); font: 13px/1.5 var(--mono); white-space: pre-wrap; }
+.wm-error { margin: 40px auto; max-width: 720px; padding: 18px 20px; border: 1.5px solid var(--ink); border-radius: 10px; background: var(--surface); color: var(--ink); font: 13px/1.5 var(--mono); white-space: pre-wrap; }
 
 /* ---- diagram (SVG) ---- */
 .wm-diagram text { font-family: var(--sans); fill: var(--ink); dominant-baseline: middle; }
-.wm-diagram .p-label { font-family: var(--mono); font-weight: 700; letter-spacing: 0.1em; fill: var(--ink-2); text-transform: uppercase; }
+.wm-diagram .p-label { font-family: var(--mono); font-weight: 700; letter-spacing: 0.1em; fill: var(--muted); text-transform: uppercase; }
 .wm-diagram .p-value { font-weight: 650; }
 .wm-diagram .p-big { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; }
-.wm-diagram .p-small { fill: var(--ink-2); }
-.wm-diagram .frame { fill: var(--card); stroke: var(--line); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.wm-diagram .shade { fill: var(--shadow); }
-.wm-diagram .hair { stroke: var(--line); stroke-width: 1.25; fill: none; vector-effect: non-scaling-stroke; }
-.wm-diagram .faint { stroke: var(--rule-strong); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke; }
-.wm-diagram .glow { transition: opacity .2s; }
-.wm-diagram .hl { fill: none; stroke: var(--accent); stroke-width: 3; vector-effect: non-scaling-stroke; opacity: 0; }
+.wm-diagram .p-small { fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wm-diagram .frame { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.wm-diagram .frame.alarm { stroke: var(--ink); stroke-width: 2; }
+.wm-diagram .hair { stroke: var(--ink-2); stroke-width: 1.25; fill: none; vector-effect: non-scaling-stroke; }
+.wm-diagram .faint { stroke: var(--line-strong); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke; }
+.wm-diagram .hl { fill: none; stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; opacity: 0; }
 .wm-diagram .hl.on { opacity: 1; }
-.wm-diagram .group-frame { fill: none; stroke: var(--ink-2); stroke-width: 1.25; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; opacity: .7; }
+.wm-diagram .group-frame { fill: none; stroke: var(--line-strong); stroke-width: 1.25; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; }
 .wm-diagram .link-path { fill: none; stroke: var(--ink-2); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.wm-diagram .link-path.inactive { stroke-dasharray: 5 5; opacity: .5; }
-.wm-diagram .chart-axis { stroke: var(--rule-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.wm-diagram .chart-ghost { fill: none; stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-dasharray: 2 4; opacity: .55; stroke-linecap: round; }
-.wm-diagram .chart-line { fill: none; stroke-width: 2.25; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
-.wm-diagram .chart-area { opacity: .10; }
-.wm-diagram .chart-ref { stroke-width: 1.25; stroke-dasharray: 7 5; vector-effect: non-scaling-stroke; }
-.wm-diagram .playhead { stroke: var(--accent); stroke-width: 1.25; vector-effect: non-scaling-stroke; opacity: .7; }
+.wm-diagram .link-path.inactive { stroke-dasharray: 5 5; opacity: .45; }
+.wm-diagram .chart-axis { stroke: var(--line-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.wm-diagram .chart-ghost { fill: none; stroke: var(--ink); stroke-width: 1.25; vector-effect: non-scaling-stroke; opacity: .22; stroke-linecap: round; }
+.wm-diagram .chart-line { fill: none; stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.wm-diagram .chart-area { fill: var(--ink); opacity: .05; }
+.wm-diagram .chart-ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 8 4; vector-effect: non-scaling-stroke; }
+.wm-diagram .chart-end { font-family: var(--mono); fill: var(--ink-2); }
+.wm-diagram .playhead { stroke: var(--ink-2); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: .45; }
 
 @media (max-width: 980px) {
-  .wm { padding: 20px 16px 28px; }
+  .wm { padding: 24px 16px 32px; }
   .wm-main { grid-template-columns: minmax(0, 1fr); }
   .wm-side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 }
 @media (max-width: 680px) {
   .wm-head { grid-template-columns: 1fr; }
-  .wm-stamp { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 8px; }
-  .wm-side { grid-template-columns: minmax(0, 1fr); }
-  .wm-transport { grid-template-columns: auto auto auto 1fr; }
-  .wm-scrubwrap { grid-column: 1 / -1; grid-row: 2; }
-  .wm-clock { text-align: left; }
-  .wm-speed { justify-self: end; }
+  .wm-counter { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 8px; }
+  /* The stage's children join the main grid, so the control bar can stay
+     pinned over the panels below it as a translucent sticky bar. */
+  .wm-main { gap: 12px; }
+  .wm-stage { display: contents; }
+  .wm-caption { margin-top: 0; }
+  .wm-transport {
+    position: sticky; top: 0; z-index: 5; margin: 0 -16px; padding: 8px 16px; padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    grid-template-columns: auto auto auto 1fr auto;
+    grid-template-areas: "play back fwd . speed" "scrub scrub scrub scrub clock";
+    row-gap: 4px;
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+  }
+  .wm-transport > .wm-btn:nth-child(1) { grid-area: play; }
+  .wm-transport > .wm-btn:nth-child(2) { grid-area: back; }
+  .wm-transport > .wm-btn:nth-child(3) { grid-area: fwd; }
+  .wm-side { grid-template-columns: minmax(0, 1fr); margin-top: 12px; }
+  .wm-scrubwrap { grid-area: scrub; }
+  .wm-clock { grid-area: clock; min-width: 0; }
+  .wm-speed { grid-area: speed; justify-self: end; }
+  .wm-speed button { padding: 0 8px; }
   .wm-foot { grid-template-columns: 1fr; }
   .wm-foot .brand { text-align: left; }
-  .wm-figure { padding: 6px; box-shadow: 3px 3px 0 var(--shadow); }
-  .wm-panel { box-shadow: 3px 3px 0 var(--shadow); }
+  .wm-figure { padding: 6px; }
   .wm-caption-text { font-size: 15px; }
   .wm-caption { grid-template-columns: 1fr; }
   .wm-caption-cites, .wm-cite-note { grid-column: 1; }
@@ -3153,6 +3138,94 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
 
 </script>
 <script>
+/* fluid.js: interruptible springs and pointer helpers for offline pages. No dependencies, about 2 KB minified.
+ * Inline a copy into each generated page. Springs use Apple's response/damping model:
+ *   response = period of the undamped spring in seconds; damping = damping ratio (1 = no bounce, 0.8 = slight bounce).
+ *   Move or reposition: damping 1, response 0.4. Drawer or sheet: damping 0.8, response 0.3. Press: damping 1, response 0.18.
+ * Every spring keeps its live value and velocity, so a new target retargets from where it is now (interruptible).
+ * Under prefers-reduced-motion every spring jumps straight to its target.
+ */
+var Fluid = (function () {
+  'use strict';
+  var mq = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function reduce() { return !!(mq && mq.matches); }
+
+  function spring(opts) {
+    opts = opts || {};
+    var x = opts.value || 0, v = 0, target = x, raf = 0, last = 0, k = 0, c = 0;
+    var onUpdate = opts.onUpdate, onRest = opts.onRest, eps = opts.epsilon || 0.001;
+    var response = opts.response || 0.4, damping = opts.damping == null ? 1 : opts.damping;
+    function params(r, d) { k = Math.pow((2 * Math.PI) / r, 2); c = (4 * Math.PI * d) / r; }
+    params(response, damping);
+    function emit() { if (onUpdate) onUpdate(x, v); }
+    function settle() { x = target; v = 0; raf = 0; emit(); if (onRest) onRest(x); }
+    function step(t) {
+      var dt = Math.min(0.064, (t - last) / 1000) || 1 / 60;
+      last = t;
+      var n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
+      for (var i = 0; i < n; i++) { var a = -k * (x - target) - c * v; v += a * h; x += v * h; }
+      if (Math.abs(x - target) < eps && Math.abs(v) < eps * 10) return settle();
+      emit();
+      raf = requestAnimationFrame(step);
+    }
+    var api = {
+      get value() { return x; },
+      get velocity() { return v; },
+      get target() { return target; },
+      /** Animate to t. opts.velocity hands off a release velocity (units per second). */
+      to: function (t, o) {
+        o = o || {};
+        target = t;
+        if (o.velocity != null) v = o.velocity;
+        if (o.response || o.damping != null) params(o.response || response, o.damping == null ? damping : o.damping);
+        if (reduce()) { cancelAnimationFrame(raf); settle(); return api; }
+        if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); }
+        return api;
+      },
+      /** Jump without animating (direct manipulation: the finger owns the value). */
+      set: function (val) { cancelAnimationFrame(raf); raf = 0; x = target = val; v = 0; emit(); return api; },
+      stop: function () { cancelAnimationFrame(raf); raf = 0; return api; },
+    };
+    return api;
+  }
+
+  /** Velocity over the last 100 ms of samples, in units per second. */
+  function velocityTracker() {
+    var s = [];
+    return {
+      add: function (p, t) { t = t == null ? performance.now() : t; s.push([p, t]); while (s.length > 2 && t - s[0][1] > 100) s.shift(); },
+      get: function () { if (s.length < 2) return 0; var a = s[0], b = s[s.length - 1]; return b[1] > a[1] ? (b[0] - a[0]) / ((b[1] - a[1]) / 1000) : 0; },
+      reset: function () { s.length = 0; },
+    };
+  }
+
+  /** Where a flick comes to rest under exponential decay (deceleration rate per millisecond, 0.998 = normal). */
+  function project(velocity, rate) { rate = rate || 0.998; return ((velocity / 1000) * rate) / (1 - rate); }
+
+  /** Resistance past an edge: overshoot in px, dimension = track length in px. Returns the drawn overshoot. */
+  function rubber(overshoot, dimension, coeff) {
+    coeff = coeff || 0.55;
+    var sign = overshoot < 0 ? -1 : 1, o = Math.abs(overshoot);
+    return sign * (1 - 1 / ((o * coeff) / dimension + 1)) * dimension;
+  }
+
+  /** Press feedback on pointer-down. Scales el with a spring; a move of more than 10 px cancels the press. */
+  function pressable(el, o) {
+    o = o || {};
+    var down = o.scale || 0.97, start = null, sp = spring({ value: 1, response: 0.18, damping: 1, onUpdate: function (s) {
+      el.style.transform = s === 1 ? '' : 'scale(' + s.toFixed(4) + ')';
+    } });
+    function release() { start = null; sp.to(1, { response: 0.3, damping: 0.8 }); }
+    el.addEventListener('pointerdown', function (e) { if (e.button > 0) return; start = [e.clientX, e.clientY]; sp.to(down, { response: 0.18, damping: 1 }); });
+    el.addEventListener('pointermove', function (e) { if (start && Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 10) release(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { el.addEventListener(n, function () { if (start) release(); }); });
+    return sp;
+  }
+
+  return { spring: spring, velocityTracker: velocityTracker, project: project, rubber: rubber, pressable: pressable, reduce: reduce };
+})();
+if (typeof module !== 'undefined') module.exports = Fluid;
+
 /* working-model page runtime. Plain browser JavaScript, inlined into every
    built page after the engine bundle (window-less global WM). No network,
    no storage, no timers beyond requestAnimationFrame. */
@@ -3167,6 +3240,11 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   var spec = JSON.parse(document.getElementById('wm-spec').textContent);
   var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var TONE_SET = { ink: 1, muted: 1, accent: 1, ok: 1, bad: 1, warn: 1, soft: 1, info: 1 };
+  // Spec tones keep their names, but the page draws them in ink: status is
+  // weight and shape, never hue. "accent" in a spec is a diagram emphasis, not
+  // the page accent, which is kept for what the reader touches or has selected.
+  var TONE_INK = { ink: 'var(--ink)', bad: 'var(--ink)', warn: 'var(--ink-2)', accent: 'var(--ink-2)', ok: 'var(--ink-2)', info: 'var(--muted)', muted: 'var(--muted)', soft: 'var(--line-strong)' };
+  var PULSE = 'color-mix(in srgb, var(--ink) 9%, transparent)';
 
   // ------------------------------------------------------------ helpers --
   function h(tag, cls, text, parent) {
@@ -3188,15 +3266,30 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     e[key] = v;
     e.setAttribute(k, v);
   }
+  // A tone name (or a spec's own #rrggbb, drawn as body ink) to an ink colour.
   function tone(v, fallback) {
-    if (typeof v !== 'string') return 'var(--' + (fallback || 'ink') + ')';
-    if (TONE_SET[v]) return 'var(--' + v + ')';
-    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
-    return 'var(--' + (fallback || 'ink') + ')';
+    if (typeof v === 'string' && TONE_SET[v]) return TONE_INK[v];
+    if (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) return 'var(--ink-2)';
+    return TONE_INK[fallback] || 'var(--ink)';
   }
   function soft(v) {
-    if (v === 'accent' || v === 'ok' || v === 'bad') return 'var(--' + v + '-soft)';
-    return 'color-mix(in srgb, ' + tone(v, 'accent') + ' 16%, transparent)';
+    return 'color-mix(in srgb, ' + tone(v, 'accent') + ' 10%, transparent)';
+  }
+  // Paint a cell or chip by tone, as the page's status levels:
+  // bad and ink are solid ink (L3), ok and accent an ink outline (L2), warn a
+  // hatched outline, info and muted a quiet fill (L1), soft a dashed empty (L0).
+  function paintTone(rect, textEl, tn, w) {
+    var st = rect.style;
+    var key = typeof tn === 'string' && TONE_SET[tn] ? tn : 'accent';
+    var lw = w || 1.5;
+    st.strokeDasharray = '';
+    if (key === 'bad' || key === 'ink') { st.fill = 'var(--ink)'; st.stroke = 'var(--ink)'; st.strokeWidth = String(lw); }
+    else if (key === 'warn') { st.fill = hatch('warn'); st.stroke = 'var(--ink-2)'; st.strokeWidth = String(lw); }
+    else if (key === 'info' || key === 'muted') { st.fill = 'var(--surface-2)'; st.stroke = 'var(--line-strong)'; st.strokeWidth = '1'; }
+    else if (key === 'soft') { st.fill = 'transparent'; st.stroke = 'var(--line-strong)'; st.strokeWidth = '1'; st.strokeDasharray = '3 2'; }
+    else if (key === 'ok') { st.fill = 'var(--surface)'; st.stroke = 'var(--ink)'; st.strokeWidth = String(lw); }
+    else { st.fill = 'var(--surface-2)'; st.stroke = 'var(--ink-2)'; st.strokeWidth = String(lw * 0.85); }
+    if (textEl) textEl.style.fill = key === 'bad' || key === 'ink' ? 'var(--bg)' : key === 'info' || key === 'muted' ? 'var(--muted)' : 'var(--ink)';
   }
   function clamp(x, lo, hi) { return x < lo ? lo : x > hi ? hi : x; }
   function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
@@ -3218,6 +3311,70 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     if (stroke) { p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor'); p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); } else p.setAttribute('fill', 'currentColor');
     return svgEl;
   }
+  // Chip materialise (damping 1, response 0.25): scale 0.9 -> 1 and opacity 0 -> 1
+  // on one spring. A new target retargets from the live value, so a chip that is
+  // still appearing reverses smoothly, and nothing is ever locked.
+  function chipSpring(el) {
+    var sp = Fluid.spring({
+      value: 1, response: 0.25, damping: 1,
+      onUpdate: function (x) {
+        var u = clamp(x, 0, 1);
+        el.style.opacity = u >= 1 ? '' : u.toFixed(3);
+        el.style.transform = u >= 1 ? '' : 'scale(' + (0.9 + 0.1 * u).toFixed(4) + ')';
+      },
+      onRest: function (x) { if (x <= 0) el.hidden = true; },
+    });
+    return {
+      show: function () { if (el.hidden) { sp.set(0); el.hidden = false; } sp.to(1); },
+      hide: function () { if (!el.hidden) sp.to(0); },
+      // the chip's content changed: appear again, from wherever it is now
+      pop: function () { if (sp.value >= 1 && sp.target >= 1) sp.set(0); el.hidden = false; sp.to(1); },
+      jump: function (on) { sp.set(on ? 1 : 0); el.hidden = !on; },
+    };
+  }
+  // The counterexample well: a disclosure body on a height spring (damping 1,
+  // response 0.35) that reverses mid-flight from its live height.
+  function wellSpring(well, inner) {
+    var open = !well.hidden;
+    var running = false;
+    var sp = Fluid.spring({
+      value: 0, response: 0.35, damping: 1,
+      onUpdate: function (x) { well.style.height = Math.max(0, x).toFixed(1) + 'px'; },
+      onRest: function () { running = false; well.style.height = ''; if (!open) well.hidden = true; },
+    });
+    return {
+      get open() { return open; },
+      set: function (on, animate) {
+        if (on === open && !running) return;
+        open = on;
+        if (!animate) { sp.stop(); running = false; well.style.height = ''; well.hidden = !on; return; }
+        if (!running) sp.set(on ? 0 : well.offsetHeight);
+        well.hidden = false;
+        running = true;
+        sp.to(on ? inner.offsetHeight : 0);
+      },
+    };
+  }
+  // Press spring on a native slider thumb (1 -> 1.18, damping 1, response 0.18;
+  // back with damping 0.8, response 0.3). The thumb is a pseudo-element, so the
+  // spring writes --thumb-s, which the thumb's transform reads.
+  function thumbPress(input) {
+    var sp = Fluid.spring({ value: 1, response: 0.18, damping: 1, onUpdate: function (x) { input.style.setProperty('--thumb-s', x.toFixed(4)); } });
+    function up() {
+      if (!input.hasAttribute('data-pressed')) return;
+      input.removeAttribute('data-pressed');
+      sp.to(1, { response: 0.3, damping: 0.8 });
+    }
+    input.addEventListener('pointerdown', function (e) {
+      if (e.button > 0) return;
+      input.setAttribute('data-pressed', '');
+      if (!Fluid.reduce()) sp.to(1.18, { response: 0.18, damping: 1 });
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture', 'blur'].forEach(function (n) { input.addEventListener(n, up); });
+    document.addEventListener('pointerup', up);
+    return sp;
+  }
+  function press(el, scale) { if (window.Fluid) Fluid.pressable(el, scale ? { scale: scale } : null); return el; }
   function fmt(v, f) { return WM.formatValue(v, f); }
   function fmtTime(t) {
     var u = model.timeUnit || '';
@@ -3257,12 +3414,22 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   h('div', 'wm-kicker', 'Working model', head);
   h('h1', 'wm-title', model.title, head);
   var summaryEl = h('p', 'wm-summary', '', head);
-  var stamp = h('div', 'wm-stamp', null, head);
-  stamp.setAttribute('role', 'status');
-  stamp.setAttribute('aria-live', 'polite');
-  var stampIcon = h('span', null, null, stamp);
-  var stampText = h('span', null, '', stamp);
-  stampText.setAttribute('data-testid', 'claims-summary');
+  // The claims counter: "6 of 6 claims hold", or "5 of 6 claims hold · 1 fails"
+  // with the fails part as an inverse (L3) chip. It sits straight and never bounces.
+  var counter = h('div', 'wm-counter', null, head);
+  counter.setAttribute('role', 'status');
+  counter.setAttribute('aria-live', 'polite');
+  counter.setAttribute('data-testid', 'claims-counter');
+  var counterText = h('span', null, '', counter);
+  counterText.setAttribute('data-testid', 'claims-summary');
+  var counterSep = h('span', 'sep', '·', counter);
+  counterSep.setAttribute('aria-hidden', 'true');
+  var failChip = h('span', 'wm-chip l3', null, counter);
+  failChip.setAttribute('data-testid', 'claims-fails');
+  failChip.setAttribute('data-level', '3');
+  failChip.appendChild(icon('cross'));
+  var failChipText = h('span', null, '', failChip);
+  var failChipSp = chipSpring(failChip);
 
   var main = h('main', 'wm-main', null, root);
   var stage = h('section', 'wm-stage', null, main);
@@ -3292,17 +3459,23 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   bBack.type = 'button'; bBack.setAttribute('aria-label', 'Step back one tick'); bBack.appendChild(icon('back'));
   var bFwd = h('button', 'wm-btn', null, transport);
   bFwd.type = 'button'; bFwd.setAttribute('aria-label', 'Step forward one tick'); bFwd.appendChild(icon('fwd'));
+  press(bPlay); press(bBack); press(bFwd);
   var scrubWrap = h('div', 'wm-scrubwrap', null, transport);
+  scrubWrap.setAttribute('data-testid', 'scrubber');
   var marks = h('div', 'wm-marks', null, scrubWrap);
+  var track = h('div', 'wm-track', null, scrubWrap);
+  var trackFill = h('div', 'wm-track-fill', null, track);
   var scrub = h('input', 'wm-scrub', null, scrubWrap);
   scrub.type = 'range'; scrub.min = '0'; scrub.max = String(model.duration); scrub.step = 'any'; scrub.value = '0';
   scrub.setAttribute('aria-label', 'Time');
+  var thumb = h('div', 'wm-thumb', null, scrubWrap);
+  thumb.setAttribute('aria-hidden', 'true');
   var clock = h('span', 'wm-clock', '', transport);
   var speedBox = h('div', 'wm-speed', null, transport);
   speedBox.setAttribute('role', 'group');
   speedBox.setAttribute('aria-label', 'Playback speed');
   [0.5, 1, 2, 4].forEach(function (m) {
-    var b = h('button', null, (m === 0.5 ? '½' : m) + '×', speedBox);
+    var b = press(h('button', null, (m === 0.5 ? '½' : m) + '×', speedBox), 0.94);
     b.type = 'button';
     b.setAttribute('aria-pressed', m === 1 ? 'true' : 'false');
     b.setAttribute('aria-label', 'Speed ' + m + ' times');
@@ -3316,11 +3489,12 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   var claimsPanel = h('section', 'wm-panel wm-claims', null, side);
   claimsPanel.setAttribute('aria-label', 'Claims');
   var claimsH = h('h2', null, 'Claims', claimsPanel);
-  var claimsN = h('span', 'n', '', claimsH);
+  var claimsN = h('span', 'wm-chip l1', '', claimsH);
+  claimsN.setAttribute('data-level', '1');
   var claimsList = h('ol', null, null, claimsPanel);
   var claimResetRow = h('div', 'wm-reset-row', null, claimsPanel);
   h('p', null, 'A claim fails at these settings. The explanation only holds inside the range where its claims pass.', claimResetRow);
-  var bResetClaims = h('button', 'wm-btn wm-mini', null, claimResetRow);
+  var bResetClaims = press(h('button', 'wm-btn wm-mini', null, claimResetRow));
   bResetClaims.type = 'button'; bResetClaims.setAttribute('data-action', 'reset');
   bResetClaims.appendChild(icon('reset')); bResetClaims.appendChild(document.createTextNode('Reset parameters'));
   claimResetRow.hidden = true;
@@ -3359,7 +3533,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         group.setAttribute('data-param', p.id);
         group.id = id;
         pv.buttons = p.choices.map(function (label, i) {
-          var b = h('button', null, label, group);
+          var b = press(h('button', null, label, group), 0.96);
           b.type = 'button';
           b.setAttribute('role', 'radio');
           var val = p.min + i * p.step;
@@ -3372,6 +3546,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         input.type = 'range'; input.id = id; input.min = String(p.min); input.max = String(p.max); input.step = String(p.step);
         input.value = String(p.default);
         input.setAttribute('data-param', p.id);
+        thumbPress(input);
         var rng = h('div', 'range', null, row);
         h('span', null, fmt(p.min, p.format), rng);
         h('span', null, fmt(p.max, p.format), rng);
@@ -3388,7 +3563,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     });
     var pr = h('div', 'wm-reset-row', null, paramsPanel);
     h('p', null, 'Drag a slider and watch the claims re-check.', pr);
-    var bResetParams = h('button', 'wm-btn wm-mini', null, pr);
+    var bResetParams = press(h('button', 'wm-btn wm-mini', null, pr));
     bResetParams.type = 'button'; bResetParams.setAttribute('data-action', 'reset-params');
     bResetParams.appendChild(icon('reset')); bResetParams.appendChild(document.createTextNode('Reset'));
     bResetParams.addEventListener('click', resetParams);
@@ -3438,14 +3613,17 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     var text = h('p', 'text', '', body);
     var meta = h('div', 'meta', null, body);
     h('span', 'cid', kindLabel(c), meta);
-    var why = h('div', 'why', '', body);
-    var show = h('button', 'wm-btn wm-mini show', 'Show when it fails', body);
+    var well = h('div', 'well', null, body);
+    well.hidden = true;
+    var wellIn = h('div', 'well-in', null, well);
+    var why = h('div', 'why', '', wellIn);
+    var show = press(h('button', 'wm-btn wm-mini show', 'Show when it fails', wellIn));
     show.type = 'button';
     show.addEventListener('click', function () {
       var r = resultOf(c.id);
       if (r && r.counterexample && r.counterexample.t != null) { pause(); setTime(r.counterexample.t); }
     });
-    return { c: c, li: li, mark: mark, text: text, why: why, show: show, status: null };
+    return { c: c, li: li, mark: mark, markSp: chipSpring(mark), well: wellSpring(well, wellIn), text: text, why: why, show: show, status: null };
   });
   function kindLabel(c) {
     switch (c.kind) {
@@ -3468,26 +3646,35 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     var passed = check.passed;
     var total = check.total;
     var allPass = passed === total;
-    stampText.textContent = passed + '/' + total + ' claims pass';
-    stamp.setAttribute('data-status', allPass ? 'pass' : 'fail');
-    stampIcon.innerHTML = '';
-    stampIcon.appendChild(icon(allPass ? 'check' : 'cross'));
-    claimsN.textContent = passed + '/' + total + ' pass';
-    claimsN.classList.toggle('fail', !allPass);
+    var fails = total - passed;
+    var first = counter.getAttribute('data-passed') == null;
+    counterText.textContent = passed + ' of ' + total + ' claims hold';
+    counter.setAttribute('data-status', allPass ? 'pass' : 'fail');
+    counter.setAttribute('data-passed', String(passed));
+    counter.setAttribute('data-total', String(total));
+    counter.setAttribute('data-fails', String(fails));
+    if (fails > 0) failChipText.textContent = fails + ' fails';
+    counterSep.hidden = fails === 0;
+    if (first) failChipSp.jump(fails > 0); else if (fails > 0) failChipSp.show(); else failChipSp.hide();
+    claimsN.textContent = passed + ' of ' + total;
     claimViews.forEach(function (cv) {
       var r = resultOf(cv.c.id);
       if (!r) return;
+      var flipped = cv.status !== null && cv.status !== r.status;
       cv.text.textContent = r.text;
       cv.li.setAttribute('data-status', r.status);
-      cv.mark.innerHTML = '';
-      cv.mark.appendChild(icon(r.pass ? 'check' : 'cross'));
-      cv.mark.setAttribute('aria-label', r.pass ? 'passes' : 'fails');
-      cv.why.textContent = r.pass ? '' : r.line;
-      cv.show.hidden = !(r.counterexample && r.counterexample.t != null);
-      if (cv.status !== null && cv.status !== r.status) {
-        cv.li.classList.remove('flip'); void cv.li.offsetWidth; cv.li.classList.add('flip');
-        stamp.classList.remove('flip'); void stamp.offsetWidth; stamp.classList.add('flip');
+      if (flipped || cv.status === null) {
+        cv.mark.innerHTML = '';
+        cv.mark.appendChild(icon(r.pass ? 'check' : 'cross'));
       }
+      cv.mark.setAttribute('aria-label', r.pass ? 'passes' : 'fails');
+      cv.mark.setAttribute('data-level', r.pass ? '1' : '3');
+      if (!r.pass) cv.why.textContent = r.line;
+      cv.show.hidden = !(r.counterexample && r.counterexample.t != null);
+      // a claim that flips materialises its new state; the well opens or
+      // closes from its live height, so dragging back mid-flight reverses it
+      if (flipped) cv.markSp.pop();
+      cv.well.set(!r.pass, flipped);
       cv.status = r.status;
     });
     claimResetRow.hidden = allPass;
@@ -3613,6 +3800,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     }
   }
   function num(v, d) { return typeof v === 'number' && isFinite(v) ? v : d; }
+  function alarmOn(p, tn) { return tn === 'bad' && !(p.spec && typeof p.spec.tone === 'string' && TONE_SET[p.spec.tone]); }
 
   var views = [];
   // maps keyed by names from the spec have no prototype, so an emit or part
@@ -3634,7 +3822,6 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   }
 
   function frameBox(g, r) {
-    s('rect', { x: r.x + 4, y: r.y + 4, width: r.w, height: r.h, rx: 6, 'class': 'shade' }, g);
     var fr = s('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 6, 'class': 'frame' }, g);
     var pulse = s('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 6, opacity: 0 }, g);
     pulse.style.pointerEvents = 'none';
@@ -3689,7 +3876,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       if (p.label) {
         var t = T_(g, 'p-label', 'label');
         t.el.style.paintOrder = 'stroke';
-        t.el.style.stroke = 'var(--card)';
+        t.el.style.stroke = 'var(--surface)';
         t.el.style.strokeWidth = '6px';
         t.el.style.strokeLinejoin = 'round';
         setText(t, p.label.toUpperCase());
@@ -3699,7 +3886,6 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     },
     box: function (v, g, r, p) {
       var f = frameBox(g, r);
-      v.bar = s('rect', { x: r.x, y: r.y + 6, width: 4, height: Math.max(0, r.h - 12), rx: 2, opacity: 0 }, g);
       makeLabel(v, g);
       v.text = T_(g, 'p-value', 'value');
       v.text.wrap = true;
@@ -3713,7 +3899,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       };
       v.update = function (fr) {
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone');
-        if (tn) { v.bar.style.fill = tone(tn); setAttr(v.bar, 'opacity', 1); } else setAttr(v.bar, 'opacity', 0);
+        f.frame.classList.toggle('alarm', alarmOn(p, tn));
         if (p.text) setText(v.text, evalB(p.text, fr.env0, '', p.id + '.text'));
         pulseFill(v, f.pulse, tn || 'accent', fr);
       };
@@ -3733,7 +3919,8 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       v.update = function (fr) {
         var val = evalB(p.value, fr.env0, 0, p.id + '.value');
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone');
-        v.text.el.style.fill = tn ? tone(tn) : 'var(--ink)';
+        v.text.el.style.fill = tn === 'muted' || tn === 'info' || tn === 'soft' ? 'var(--ink-2)' : 'var(--ink)';
+        f.frame.classList.toggle('alarm', alarmOn(p, tn));
         setText(v.text, fmt(val, p.format) + (p.unit ? ' ' + p.unit : ''));
         var since = v.changes ? sinceLast(v.changes, fr.k) : Infinity;
         var a = reduceMotion ? 0 : clamp(1 - (since * model.dt) / (0.3 * baseSpeed), 0, 1) * 0.6;
@@ -3741,7 +3928,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
           var t0 = lastBefore(v.pulseTimes, fr.t);
           if (t0 != null && !reduceMotion) a = Math.max(a, clamp(1 - (fr.t - t0) / (0.4 * baseSpeed), 0, 1));
         }
-        f.pulse.style.fill = soft(tn || 'accent');
+        f.pulse.style.fill = PULSE;
         setAttr(f.pulse, 'opacity', a.toFixed(2));
       };
       v.recompute = function () {
@@ -3787,7 +3974,6 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
           ' L' + (vx + vw - rad) + ',' + (vy + vh) + ' Q' + (vx + vw) + ',' + (vy + vh) + ' ' + (vx + vw) + ',' + (vy + vh - rad) + ' L' + (vx + vw) + ',' + vy;
         clipPathEl.setAttribute('d', vessel + ' Z');
         shell.textContent = '';
-        s('path', { d: vessel + ' Z', transform: 'translate(4,4)', 'class': 'shade' }, shell);
         s('path', { d: vessel + ' Z', 'class': 'frame' }, shell).style.stroke = 'none';
         outline.textContent = '';
         for (var i = 1; i < 4; i++) {
@@ -3826,9 +4012,11 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     lamp: function (v, g, r, p) {
       var f = frameBox(g, r);
       makeLabel(v, g);
-      v.glow = s('circle', { opacity: 0, 'class': 'glow' }, g);
       v.bulb = s('circle', { 'class': 'hair' }, g);
       v.bulb.style.strokeWidth = '1.5';
+      v.glyph = s('path', { fill: 'none', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+      v.glyph.style.stroke = 'var(--bg)';
+      v.glyph.style.vectorEffect = 'non-scaling-stroke';
       if (p.text) { v.text = T_(g, 'p-value', 'value'); v.texts.push(v.text); }
       v.layout = function () {
         layoutLabel(v);
@@ -3840,17 +4028,23 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         var rad = clamp(c.h / 2 - 3, 5, 15);
         var cx = c.x + rad + 2;
         var cy = c.y + c.h / 2;
-        v.glow.setAttribute('cx', cx); v.glow.setAttribute('cy', cy); v.glow.setAttribute('r', rad + 6);
+        v.geo = { cx: cx, cy: cy, rad: rad };
+        v.glyphKey = null;
         v.bulb.setAttribute('cx', cx); v.bulb.setAttribute('cy', cy); v.bulb.setAttribute('r', rad);
         if (v.text) place(v.text, cx + rad + 10, cy, r.x + r.w - (cx + rad + 10) - 8, 'start');
       };
       v.update = function (fr) {
         var on = evalB(p.on, fr.env0, false, p.id + '.on') === true;
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone') || 'ok';
-        v.bulb.style.fill = on ? tone(tn) : 'var(--card)';
-        v.bulb.style.stroke = on ? tone(tn) : 'var(--muted)';
-        v.glow.style.fill = tone(tn);
-        setAttr(v.glow, 'opacity', on ? 0.22 : 0);
+        v.bulb.style.fill = on ? (tn === 'bad' || tn === 'ink' ? 'var(--ink)' : 'var(--ink-2)') : 'var(--surface)';
+        v.bulb.style.stroke = on ? 'var(--ink)' : 'var(--muted)';
+        var gk = on ? (tn === 'bad' ? 'cross' : tn === 'ok' ? 'check' : '') : '';
+        if (gk !== v.glyphKey && v.geo) {
+          v.glyphKey = gk;
+          var G = v.geo, q = G.rad * 0.42;
+          v.glyph.setAttribute('d', gk === 'cross' ? 'M' + (G.cx - q) + ',' + (G.cy - q) + 'L' + (G.cx + q) + ',' + (G.cy + q) + 'M' + (G.cx + q) + ',' + (G.cy - q) + 'L' + (G.cx - q) + ',' + (G.cy + q)
+            : gk === 'check' ? 'M' + (G.cx - q * 1.1) + ',' + (G.cy + q * 0.05) + 'L' + (G.cx - q * 0.3) + ',' + (G.cy + q * 0.8) + 'L' + (G.cx + q * 1.1) + ',' + (G.cy - q * 0.75) : '');
+        }
         if (p.text) setText(v.text, evalB(p.text, fr.env0, '', p.id + '.text'));
         pulseFill(v, f.pulse, tn, fr);
       };
@@ -3859,13 +4053,13 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       var f = frameBox(g, r);
       makeLabel(v, g);
       var track = s('path', { fill: 'none', 'stroke-width': 9, 'stroke-linecap': 'round' }, g);
-      track.style.stroke = 'var(--rule-strong)';
+      track.style.stroke = 'var(--line-strong)';
       v.zones = s('g', null, g);
       v.val = s('path', { d: '', fill: 'none', 'stroke-width': 9, 'stroke-linecap': 'round' }, g);
       v.needle = s('line', { 'class': 'hair' }, g);
       v.needle.style.strokeWidth = '2';
       var hub = s('circle', { r: 4 }, g);
-      hub.style.fill = 'var(--line)';
+      hub.style.fill = 'var(--ink-2)';
       v.text = T_(g, 'p-big', 'value');
       v.texts.push(v.text);
       function arc(G, a0, a1, rr) {
@@ -3904,7 +4098,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         var ang = Math.PI + u * Math.PI;
         setAttr(v.val, 'd', u > 0.002 ? arc(G, Math.PI, ang, G.rad) : '');
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone') || 'accent';
-        v.val.style.stroke = tone(tn, 'accent');
+        v.val.style.stroke = tn === 'bad' || tn === 'ink' ? 'var(--ink)' : 'var(--ink-2)';
         setAttr(v.needle, 'x1', G.cx.toFixed(2)); setAttr(v.needle, 'y1', G.cy.toFixed(2));
         setAttr(v.needle, 'x2', (G.cx + (G.rad - 2) * Math.cos(ang)).toFixed(2));
         setAttr(v.needle, 'y2', (G.cy + (G.rad - 2) * Math.sin(ang)).toFixed(2));
@@ -3915,8 +4109,9 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
           (p.zones || []).forEach(function (z) {
             var z0 = Math.PI + clamp((z.from - lo) / (hi - lo), 0, 1) * Math.PI;
             var z1 = Math.PI + clamp((z.to - lo) / (hi - lo), 0, 1) * Math.PI;
-            var zp = s('path', { d: arc(G, z0, z1, G.rad + 8), fill: 'none', 'stroke-width': 3 }, v.zones);
-            zp.style.stroke = tone(z.tone, 'muted');
+            var zp = s('path', { d: arc(G, z0, z1, G.rad + 8), fill: 'none', 'stroke-width': z.tone === 'bad' ? 3 : 2 }, v.zones);
+            zp.style.stroke = z.tone === 'bad' ? 'var(--ink)' : z.tone === 'warn' ? 'var(--ink-2)' : 'var(--line-strong)';
+            if (z.tone === 'warn') zp.style.strokeDasharray = '3 2';
           });
         }
         setText(v.text, fmt(a, p.format) + (p.unit ? ' ' + p.unit : ''));
@@ -3961,10 +4156,13 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         v.pills.forEach(function (pl) {
           var on = pl.st.id === cur;
           pl.rect.parentNode.style.display = v.single && !on ? 'none' : '';
-          var tn = pl.st.tone || 'accent';
-          pl.rect.style.fill = on ? tone(tn) : 'transparent';
-          pl.rect.style.stroke = on ? tone(tn) : 'var(--muted)';
-          pl.t.el.style.fill = on ? 'var(--card)' : 'var(--ink-2)';
+          var lv = on ? (pl.st.tone === 'muted' || pl.st.tone === 'info' ? 1 : pl.st.tone === 'warn' ? 2 : pl.st.tone === 'soft' ? 0 : 3) : -1;
+          pl.rect.style.fill = lv === 3 ? 'var(--ink)' : lv === 1 ? 'var(--surface-2)' : 'transparent';
+          pl.rect.style.stroke = lv === 3 || lv === 2 ? 'var(--ink)' : 'var(--line-strong)';
+          pl.rect.style.strokeWidth = lv === 2 ? '2' : '1.5';
+          pl.rect.style.strokeDasharray = lv === 0 ? '3 2' : '';
+          pl.rect.parentNode.setAttribute('data-level', String(lv));
+          pl.t.el.style.fill = lv === 3 ? 'var(--bg)' : lv === 2 ? 'var(--ink)' : lv === 1 ? 'var(--ink-2)' : 'var(--muted)';
           pl.t.el.style.fontWeight = on ? '700' : '500';
         });
         pulseFill(v, f.pulse, 'accent', fr);
@@ -4029,9 +4227,9 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
           var tn = p.tones && own(p.tones, key) ? p.tones[key] : null;
           var filled = tn != null || val === true || (typeof val === 'number' && val !== 0) || (typeof val === 'string' && val !== '');
           if (tn == null) tn = 'accent';
-          c.rect.style.fill = filled ? soft(tn) : 'transparent';
-          c.rect.style.stroke = marked[i] ? 'var(--accent)' : filled ? tone(tn) : 'var(--rule-strong)';
-          c.rect.style.strokeWidth = marked[i] ? '2.5' : '1';
+          if (filled) paintTone(c.rect, c.t.el, tn, 1.25);
+          else { c.rect.style.fill = 'transparent'; c.rect.style.stroke = 'var(--line-strong)'; c.rect.style.strokeWidth = '1'; c.rect.style.strokeDasharray = ''; c.t.el.style.fill = ''; }
+          if (marked[i]) { c.rect.style.stroke = 'var(--ink)'; c.rect.style.strokeWidth = '2.5'; c.rect.style.strokeDasharray = ''; }
           var show = p.showValues && val !== null && val !== false && val !== '' && !(typeof val === 'number' && val === 0 && !p.tones) && c.size * scale >= 13;
           setText(c.t, show ? (typeof val === 'boolean' ? '1' : fmt(val)) : '');
         });
@@ -4053,6 +4251,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         setText(v.text, evalB(p.text, fr.env0, '', p.id + '.text'));
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone');
         v.text.el.style.fill = tn ? tone(tn) : '';
+        v.text.el.style.fontWeight = tn === 'bad' ? '700' : '';
       };
     },
     chart: function (v, g, r, p) { chartMaker(v, g, r, p); },
@@ -4063,7 +4262,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       if (p.label) {
         v.text = T_(g, 'p-small', 'small');
         v.text.el.style.paintOrder = 'stroke';
-        v.text.el.style.stroke = 'var(--card)';
+        v.text.el.style.stroke = 'var(--surface)';
         v.text.el.style.strokeWidth = '5px';
         setText(v.text, p.label);
         v.texts.push(v.text);
@@ -4155,7 +4354,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     if (!el || !v.pulseTimes) return;
     var t = lastBefore(v.pulseTimes, fr.t);
     var a = t == null || reduceMotion ? 0 : clamp(1 - (fr.t - t) / (0.4 * baseSpeed), 0, 1);
-    el.style.fill = soft(tn);
+    el.style.fill = PULSE;
     setAttr(el, 'opacity', (a * 0.95).toFixed(2));
   }
   function lastBefore(times, t) {
@@ -4238,7 +4437,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     function drawChip(c, q, x, y, tn, label, op) {
       setAttr(c.rect, 'x', (x + 1).toFixed(2)); setAttr(c.rect, 'y', (y + 1).toFixed(2));
       setAttr(c.rect, 'width', Math.max(1, q.w - 2).toFixed(2)); setAttr(c.rect, 'height', Math.max(1, q.h - 2).toFixed(2));
-      c.rect.style.fill = soft(tn); c.rect.style.stroke = tone(tn, 'accent');
+      paintTone(c.rect, c.t.el, tn);
       setAttr(c.t.el, 'x', (x + q.w / 2).toFixed(2)); setAttr(c.t.el, 'y', (y + q.h / 2 + 0.5).toFixed(2));
       var mw = q.w - 6;
       var base = Math.min(14, q.h * 0.5);
@@ -4262,7 +4461,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         for (var i = 0; i < shown; i++) {
           var q = G(i);
           var sr = s('rect', { x: q.x, y: q.y, width: q.w, height: q.h, rx: 5 }, v.slotsG);
-          sr.style.fill = 'none'; sr.style.stroke = 'var(--rule-strong)'; sr.style.strokeDasharray = '3 3'; sr.style.vectorEffect = 'non-scaling-stroke';
+          sr.style.fill = 'none'; sr.style.stroke = 'var(--line-strong)'; sr.style.strokeDasharray = '3 3'; sr.style.vectorEffect = 'non-scaling-stroke';
         }
         v.slotCount = shown;
       }
@@ -4315,31 +4514,33 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     setText(v.x1, fmt(model.duration) + (model.timeUnit ? ' ' + model.timeUnit : ''));
     v.refsG = s('g', null, g);
     v.refTexts = [];
+    // Series are ink lines told apart by dash pattern (solid, 6-3 dash, 2-3
+    // dot, ...) and named at the line end, not by colour and a legend.
+    var DASH = ['', '6 3', '2 3', '10 3 2 3', '1 4'];
     v.series = p.series.map(function (se, i) {
-      var tn = se.tone || (i === 0 ? 'accent' : ['ink', 'warn', 'ok', 'bad', 'info'][(i - 1) % 5]);
+      var dash = DASH[i % DASH.length];
       var area = i === 0 && p.series.length === 1 ? s('path', { 'class': 'chart-area' }, g) : null;
-      if (area) area.style.fill = tone(tn, 'accent');
-      var ghost = s('path', { 'class': 'chart-ghost' }, g);
-      ghost.style.stroke = tone(tn, 'accent');
-      var line = s('path', { 'class': 'chart-line' }, g);
-      line.style.stroke = tone(tn, 'accent');
+      var ghost = s('path', { 'class': 'chart-ghost', 'stroke-dasharray': dash || null }, g);
+      var line = s('path', { 'class': 'chart-line', 'stroke-dasharray': dash || null, 'data-dash': dash || 'solid' }, g);
       var dot = s('circle', { r: 4 }, g);
-      dot.style.fill = tone(tn, 'accent');
-      dot.style.stroke = 'var(--card)';
+      dot.style.fill = 'var(--ink)';
+      dot.style.stroke = 'var(--surface)';
       dot.style.strokeWidth = '1.5';
-      return { se: se, tn: tn, area: area, ghost: ghost, line: line, dot: dot, vals: [] };
+      return { se: se, dash: dash, area: area, ghost: ghost, line: line, dot: dot, vals: [] };
     });
     v.legend = [];
+    v.ends = [];
     if (p.series.length > 1) {
       v.series.forEach(function (se) {
-        var t = T_(g, 'p-small', 'small');
+        var key = s('line', { 'class': 'chart-line', 'stroke-dasharray': se.dash || null }, g);
+        key.style.strokeWidth = '1.5';
+        var t = T_(g, 'chart-end', 'small');
         setText(t, se.se.label || '');
-        var sw = s('rect', { width: 12, height: 3, rx: 1.5 }, g);
-        sw.style.fill = tone(se.tn, 'accent');
-        v.legend.push({ t: t, sw: sw });
+        v.ends.push({ t: t, key: key, se: se });
         v.texts.push(t);
       });
     }
+    v.endW = v.ends.reduce(function (a, E) { return Math.max(a, (E.t.str || '').length * U('small') * 0.62); }, 0);
     v.playhead = s('line', { 'class': 'playhead' }, g);
     var plot = { x: 0, y: 0, w: 1, h: 1 };
     v.plot = plot;
@@ -4350,7 +4551,8 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       var yLabW = U('small') * 3.2;
       plot.x = r.x + 10 + yLabW;
       plot.y = top + U('small') * 0.3;
-      plot.w = r.x + r.w - 12 - plot.x;
+      var endCol = v.ends.length ? Math.min(v.endW, r.w * 0.32) + 26 : 0;
+      plot.w = r.x + r.w - 12 - endCol - plot.x;
       plot.h = r.y + r.h - 6 - U('small') * 1.4 - plot.y;
       axisX.setAttribute('x1', plot.x); axisX.setAttribute('x2', plot.x + plot.w);
       axisX.setAttribute('y1', plot.y + plot.h); axisX.setAttribute('y2', plot.y + plot.h);
@@ -4361,30 +4563,45 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       place(v.yLo, plot.x - 6, plot.y + plot.h - U('small') * 0.3, yLabW - 4, 'end');
       place(v.x0, plot.x, r.y + r.h - 6 - U('small') * 0.6, plot.w / 3, 'start');
       place(v.x1, plot.x + plot.w, r.y + r.h - 6 - U('small') * 0.6, plot.w / 3, 'end');
-      v.legendY = r.y + 6 + U('label') * (0.62 + (v.legendRow2 ? 1.3 : 0));
-      v.legend.forEach(function (L) { place(L.t, 0, v.legendY, null, 'end'); });
+      v.ends.forEach(function (E) { place(E.t, plot.x + plot.w + 24, plot.y + plot.h / 2, Math.min(v.endW, r.w * 0.32) + 2, 'start'); });
       if (trace) v.redrawStatic();
     };
-    v.afterFit = function () {
-      // legend sits at the right end of the label row, last series rightmost
-      var x = r.x + r.w - 12;
-      var labelRight = v.labelText ? r.x + 10 + safeLen(v.labelText) + 12 : r.x + 10;
-      for (var i = v.legend.length - 1; i >= 0; i--) {
-        var L = v.legend[i];
-        var w = safeLen(L.t);
-        L.t.el.setAttribute('x', x.toFixed(1));
-        L.sw.setAttribute('x', (x - w - 17).toFixed(1));
-        L.sw.setAttribute('y', (v.legendY - 1.5).toFixed(1));
-        x -= w + 32;
+    // End labels sit at the height where each line ends, pushed apart so they never overlap.
+    function placeEnds() {
+      if (!v.ends.length || !trace) return;
+      var gap = U('small') * 1.3;
+      var lo = plot.y + U('small') * 0.55;
+      var hi = plot.y + plot.h - U('small') * 0.55;
+      var items = v.ends.map(function (E) {
+        var vals = E.se.vals;
+        var last = NaN;
+        for (var k = vals.length - 1; k >= 0 && !isFinite(last); k--) last = vals[k];
+        return { E: E, y: isFinite(last) ? clamp(yOf(last), lo, hi) : hi };
+      });
+      items.sort(function (a, b) { return a.y - b.y; });
+      for (var i = 1; i < items.length; i++) items[i].y = Math.max(items[i].y, items[i - 1].y + gap);
+      if (items.length && items[items.length - 1].y > hi) {
+        items[items.length - 1].y = hi;
+        for (var j = items.length - 2; j >= 0; j--) items[j].y = Math.min(items[j].y, items[j + 1].y - gap);
       }
-      var crowded = !v.legendRow2 && x + 20 < labelRight;
-      if (crowded) {
-        // not enough room beside the label: give the legend its own row
-        v.legendRow2 = true;
+      items.forEach(function (it) {
+        var x0 = plot.x + plot.w + 6;
+        it.E.t.el.setAttribute('x', (x0 + 18).toFixed(1));
+        it.E.t.el.setAttribute('y', it.y.toFixed(1));
+        setAttr(it.E.key, 'x1', x0.toFixed(1)); setAttr(it.E.key, 'x2', (x0 + 13).toFixed(1));
+        setAttr(it.E.key, 'y1', it.y.toFixed(1)); setAttr(it.E.key, 'y2', it.y.toFixed(1));
+      });
+    }
+    v.afterFit = function () {
+      // size the end-label column to the longest label, then lay out once more
+      if (!v.ends.length) return;
+      var w = v.ends.reduce(function (a, E) { return Math.max(a, safeLen(E.t)); }, 0);
+      if (w && Math.abs(w - v.endW) > 1) {
+        v.endW = w;
         v.layout();
         v.texts.forEach(fit);
-        v.afterFit();
       }
+      placeEnds();
     };
     function safeLen(t) { try { return t.el.getComputedTextLength(); } catch (e) { return 0; } }
     function niceCeil(x) {
@@ -4434,12 +4651,13 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
           var below = y - plot.y < U('small') * 1.4;
           place(t, plot.x + plot.w - 6, below ? y + U('small') * 0.85 : y - U('small') * 0.75, plot.w / 2, 'end');
           t.el.style.fill = tone(rf.tone, 'muted');
-          t.el.style.paintOrder = 'stroke'; t.el.style.stroke = 'var(--card)'; t.el.style.strokeWidth = '4px';
+          t.el.style.paintOrder = 'stroke'; t.el.style.stroke = 'var(--surface)'; t.el.style.strokeWidth = '4px';
           setText(t, rf.label);
           v.refTexts.push(t);
         }
       });
       v.series.forEach(function (se) { setAttr(se.ghost, 'd', pathFor(se.vals, trace.K, p.step)); });
+      placeEnds();
     };
     v.recompute = function () {
       var K = trace.K;
@@ -4511,13 +4729,9 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   function particle() {
     if (particleUsed < particlePool.length) return particlePool[particleUsed++];
     var g = s('g', null, layerParticles);
-    var halo = s('circle', { r: 9, opacity: 0.2 }, g);
-    var t1 = s('circle', { r: 3.2, opacity: 0.35 }, g);
-    var t2 = s('circle', { r: 2.2, opacity: 0.18 }, g);
     var core = s('circle', { r: 5.2 }, g);
-    core.style.stroke = 'var(--card)';
-    core.style.strokeWidth = '1.5';
-    var pt = { g: g, halo: halo, t1: t1, t2: t2, core: core };
+    core.style.vectorEffect = 'non-scaling-stroke';
+    var pt = { g: g, core: core, kind: null };
     particlePool.push(pt);
     particleUsed++;
     return pt;
@@ -4571,21 +4785,18 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         var pt = particle();
         var tm = v.part.toneMap;
         var tn = tm && own(tm, pp.name) ? tm[pp.name] : (typeof v.part.spec.tone === 'string' ? v.part.spec.tone : 'accent');
-        var col = tone(tn, 'accent');
+        var kind = tn === 'bad' ? 'rejected' : 'accepted';
         var pos = reduceMotion ? v.pointAt(0.5) : v.pointAt(e);
-        var p1 = v.pointAt(Math.max(0, e - 0.05));
-        var p2 = v.pointAt(Math.max(0, e - 0.1));
         pt.g.style.display = '';
-        pt.core.style.fill = col; pt.halo.style.fill = col; pt.t1.style.fill = col; pt.t2.style.fill = col;
+        if (pt.kind !== kind) {
+          pt.kind = kind;
+          pt.g.setAttribute('data-kind', kind);
+          if (kind === 'rejected') { pt.core.style.fill = 'var(--surface)'; pt.core.style.stroke = 'var(--ink)'; pt.core.style.strokeWidth = '1.75'; setAttr(pt.core, 'r', 4.6); }
+          else { pt.core.style.fill = 'var(--ink)'; pt.core.style.stroke = 'var(--surface)'; pt.core.style.strokeWidth = '1.5'; setAttr(pt.core, 'r', 5.2); }
+        }
         setAttr(pt.core, 'cx', pos[0].toFixed(1)); setAttr(pt.core, 'cy', pos[1].toFixed(1));
-        setAttr(pt.halo, 'cx', pos[0].toFixed(1)); setAttr(pt.halo, 'cy', pos[1].toFixed(1));
-        setAttr(pt.t1, 'cx', p1[0].toFixed(1)); setAttr(pt.t1, 'cy', p1[1].toFixed(1));
-        setAttr(pt.t2, 'cx', p2[0].toFixed(1)); setAttr(pt.t2, 'cy', p2[1].toFixed(1));
         var fade = u > 0.85 ? (1 - u) / 0.15 : 1;
         setAttr(pt.g, 'opacity', fade.toFixed(2));
-        pt.halo.style.display = reduceMotion ? 'none' : '';
-        pt.t1.style.display = reduceMotion ? 'none' : '';
-        pt.t2.style.display = reduceMotion ? 'none' : '';
         drawn++;
       }
     });
@@ -4693,7 +4904,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
         cap.cites.forEach(function (id) {
           var r = resultOf(id);
           var idx = model.claims.findIndex(function (c) { return c.id === id; });
-          var b = h('button', 'wm-cite', null, capCites);
+          var b = press(h('button', 'wm-cite', null, capCites), 0.94);
           b.type = 'button';
           b.setAttribute('data-status', r && r.pass ? 'pass' : 'fail');
           b.appendChild(icon(r && r.pass ? 'check' : 'cross'));
@@ -4715,7 +4926,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
       capCites.textContent = '';
     }
     scrub.value = String(t);
-    scrub.style.setProperty('--fill', (t / model.duration * 100) + '%');
+    drawThumb();
     // the clock names the tick whose values are on screen; rounding t itself
     // showed "t = 5 s" beside the values of t = 4 when dt is 1
     clock.textContent = fmtTime(k * model.dt);
@@ -4773,7 +4984,59 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
   bPlay.addEventListener('click', function () { if (playing) pause(); else play(); });
   bBack.addEventListener('click', function () { step(-1); });
   bFwd.addEventListener('click', function () { step(1); });
+  // keyboard and assistive tech drive the native input; the pointer drives the drawn thumb
   scrub.addEventListener('input', function () { playing = false; T = Number(scrub.value); render(); });
+
+  // ------------------------------------------------------------ scrubber --
+  // Pointer capture, the grab offset kept, 1:1 tracking. Past either end the
+  // thumb rubber-bands (Fluid.rubber); on release it springs back inside the
+  // track (damping 1, response 0.4) carrying the release velocity. No momentum
+  // projection: a timeline needs precision.
+  var scrubOver = 0;
+  var thumbScale = 1;
+  var overSp = Fluid.spring({ value: 0, response: 0.4, damping: 1, onUpdate: function (x) { scrubOver = x; drawThumb(); } });
+  var thumbSp = Fluid.spring({ value: 1, response: 0.18, damping: 1, onUpdate: function (x) { thumbScale = x; drawThumb(); } });
+  var scrubVel = Fluid.velocityTracker();
+  var drag = null;
+  function drawThumb() {
+    var w = track.clientWidth || 0;
+    var f = clamp(T / model.duration, 0, 1);
+    trackFill.style.transform = 'scaleX(' + f.toFixed(4) + ')';
+    thumb.style.transform = 'translateX(' + (f * w + scrubOver).toFixed(2) + 'px)' + (thumbScale !== 1 ? ' scale(' + thumbScale.toFixed(4) + ')' : '');
+  }
+  function dragTo(x) {
+    var r = track.getBoundingClientRect();
+    var w = Math.max(1, r.width);
+    var raw = x - drag.grab - r.left;
+    var over = raw < 0 ? Fluid.rubber(raw, w) : raw > w ? Fluid.rubber(raw - w, w) : 0;
+    scrubVel.add(over);
+    overSp.set(over);
+    setTime(clamp(raw / w, 0, 1) * model.duration);
+  }
+  function endDrag() {
+    if (!drag) return;
+    drag = null;
+    scrubWrap.removeAttribute('data-pressed');
+    thumbSp.to(1, { response: 0.3, damping: 0.8 });
+    overSp.to(0, { velocity: scrubVel.get() });
+  }
+  scrubWrap.addEventListener('pointerdown', function (e) {
+    if (e.button > 0) return;
+    e.preventDefault();
+    var r = track.getBoundingClientRect();
+    var thumbX = r.left + clamp(T / model.duration, 0, 1) * r.width;
+    // grabbing the thumb keeps the finger's offset from its centre; pressing the bare track brings the thumb under the pointer
+    drag = { id: e.pointerId, grab: Math.abs(e.clientX - thumbX) <= 14 ? e.clientX - thumbX : 0 };
+    try { scrubWrap.setPointerCapture(e.pointerId); } catch (err) { /* a synthetic event has no capture */ }
+    scrubWrap.setAttribute('data-pressed', '');
+    if (playing) pause();
+    scrubVel.reset();
+    overSp.stop();
+    if (!Fluid.reduce()) thumbSp.to(1.18, { response: 0.18, damping: 1 });
+    dragTo(e.clientX);
+  });
+  scrubWrap.addEventListener('pointermove', function (e) { if (drag && e.pointerId === drag.id) dragTo(e.clientX); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (n) { scrubWrap.addEventListener(n, function (e) { if (drag && e.pointerId === drag.id) endDrag(); }); });
   document.addEventListener('keydown', function (e) {
     var tg = e.target;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -4863,7 +5126,7 @@ return { unitFor, analyze, compileModel, checkClaims, simulate, snapshotEnv, res
     }
     var vw = document.documentElement.clientWidth;
     if (document.documentElement.scrollWidth > vw + 1) add('E_PAGE_OVERFLOW', 'the page scrolls sideways (' + document.documentElement.scrollWidth + 'px content in a ' + vw + 'px window)');
-    var htmlText = root.querySelectorAll('.wm-title, .wm-summary, .wm-caption-text, .wm-claim .text, .wm-claim .why, .wm-param label, .wm-btn, .wm-clock, .wm-stamp');
+    var htmlText = root.querySelectorAll('.wm-title, .wm-summary, .wm-caption-text, .wm-claim .text, .wm-claim .why, .wm-param label, .wm-btn, .wm-clock, .wm-counter');
     Array.prototype.forEach.call(htmlText, function (e) {
       if (e.offsetParent === null) return;
       var rb = e.getBoundingClientRect();

@@ -16,7 +16,15 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.webp">
     <source media="(prefers-color-scheme: light)" srcset="docs/media/hero-light.webp">
-    <img src="docs/media/hero-light.webp" width="100%" alt="The prompt &quot;Explain how a token bucket works&quot; beside the page working-model built for it, where moving the refill slider to 0.5 turned one claim in the Claims panel red.">
+    <img src="docs/media/hero-light.webp" width="100%" alt="The prompt &quot;Explain how a token bucket works&quot; beside the page working-model built for it, where moving the refill slider to 0.5 made one claim in the Claims panel fail.">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/app-dark.webp">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/app-light.webp">
+    <img src="docs/media/app-light.webp" width="100%" alt="The token bucket page working-model built, with the refill slider at 0.5 and the header reading 5 of 6 claims hold, 1 fails.">
   </picture>
 </p>
 
@@ -97,13 +105,13 @@ Every claim catches some broken version of the rules, and each surviving mutant 
 
 ## See It Work
 
-![Dragging the vaccination slider down in the SIR epidemic model: the infection curve rises past the hospital line and the claim about it turns red, with the moment it fails](docs/media/claim-turns-red.gif)
+![Dragging the vaccination slider down in the SIR epidemic model: the infection curve rises past the hospital line and the claim about it fails, showing the first moment it breaks](docs/media/claim-fails.gif)
 
-*The SIR epidemic example. At 40% vaccinated, every claim passes. Drag vaccination down to 15% and the curve climbs past the hospital line: the claim "the number sick at once never passes the hospital line" turns red and shows the first moment it fails. The page computed that, not a script that recorded it.*
+*The SIR epidemic example. At 40% vaccinated, every claim passes. Drag vaccination down to 15% and the curve climbs past the hospital line: the claim "the number sick at once never passes the hospital line" fails and shows the first moment it breaks. The page computed that, not a script that recorded it.*
 
 ![The token bucket page: the bucket emptying as a burst of requests arrives, particles flowing to the server and to the rejected box, a chart of tokens over time, the claims panel and the sliders](docs/media/token-bucket.png)
 
-*The token bucket page, offline. Press play, scrub through time, step tick by tick with the arrow keys, and drag any slider. Every claim re-checks on the spot. Push the burst below the bucket size and "the first 10 requests pass" turns red, because there were never 10 requests: that is where the explanation stops holding.*
+*The token bucket page, offline. Press play, scrub through time, step tick by tick with the arrow keys, and drag any slider. Every claim re-checks on the spot. Push the burst below the bucket size and "the first 10 requests pass" fails, because there were never 10 requests: that is where the explanation stops holding.*
 
 ## How It Works
 
@@ -182,7 +190,7 @@ No. It is one HTML file with everything inlined, and its security policy blocks 
 **Can I edit the spec by hand?**
 Yes. It is plain JSON with a JSON Schema for editor completion. Run `check` after each change.
 
-**What does "N/N claims pass" in the page mean?**
+**What does "N of N claims hold" in the page mean?**
 The page simulated the model with the current slider values and checked every claim in your browser, just now. Move a slider and it runs again.
 
 **Why did a claim fail when I moved a slider?**

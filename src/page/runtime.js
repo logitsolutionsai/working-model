@@ -12,6 +12,11 @@
   var spec = JSON.parse(document.getElementById('wm-spec').textContent);
   var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var TONE_SET = { ink: 1, muted: 1, accent: 1, ok: 1, bad: 1, warn: 1, soft: 1, info: 1 };
+  // Spec tones keep their names, but the page draws them in ink: status is
+  // weight and shape, never hue. "accent" in a spec is a diagram emphasis, not
+  // the page accent, which is kept for what the reader touches or has selected.
+  var TONE_INK = { ink: 'var(--ink)', bad: 'var(--ink)', warn: 'var(--ink-2)', accent: 'var(--ink-2)', ok: 'var(--ink-2)', info: 'var(--muted)', muted: 'var(--muted)', soft: 'var(--line-strong)' };
+  var PULSE = 'color-mix(in srgb, var(--ink) 9%, transparent)';
 
   // ------------------------------------------------------------ helpers --
   function h(tag, cls, text, parent) {
@@ -33,15 +38,30 @@
     e[key] = v;
     e.setAttribute(k, v);
   }
+  // A tone name (or a spec's own #rrggbb, drawn as body ink) to an ink colour.
   function tone(v, fallback) {
-    if (typeof v !== 'string') return 'var(--' + (fallback || 'ink') + ')';
-    if (TONE_SET[v]) return 'var(--' + v + ')';
-    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
-    return 'var(--' + (fallback || 'ink') + ')';
+    if (typeof v === 'string' && TONE_SET[v]) return TONE_INK[v];
+    if (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) return 'var(--ink-2)';
+    return TONE_INK[fallback] || 'var(--ink)';
   }
   function soft(v) {
-    if (v === 'accent' || v === 'ok' || v === 'bad') return 'var(--' + v + '-soft)';
-    return 'color-mix(in srgb, ' + tone(v, 'accent') + ' 16%, transparent)';
+    return 'color-mix(in srgb, ' + tone(v, 'accent') + ' 10%, transparent)';
+  }
+  // Paint a cell or chip by tone, as the page's status levels:
+  // bad and ink are solid ink (L3), ok and accent an ink outline (L2), warn a
+  // hatched outline, info and muted a quiet fill (L1), soft a dashed empty (L0).
+  function paintTone(rect, textEl, tn, w) {
+    var st = rect.style;
+    var key = typeof tn === 'string' && TONE_SET[tn] ? tn : 'accent';
+    var lw = w || 1.5;
+    st.strokeDasharray = '';
+    if (key === 'bad' || key === 'ink') { st.fill = 'var(--ink)'; st.stroke = 'var(--ink)'; st.strokeWidth = String(lw); }
+    else if (key === 'warn') { st.fill = hatch('warn'); st.stroke = 'var(--ink-2)'; st.strokeWidth = String(lw); }
+    else if (key === 'info' || key === 'muted') { st.fill = 'var(--surface-2)'; st.stroke = 'var(--line-strong)'; st.strokeWidth = '1'; }
+    else if (key === 'soft') { st.fill = 'transparent'; st.stroke = 'var(--line-strong)'; st.strokeWidth = '1'; st.strokeDasharray = '3 2'; }
+    else if (key === 'ok') { st.fill = 'var(--surface)'; st.stroke = 'var(--ink)'; st.strokeWidth = String(lw); }
+    else { st.fill = 'var(--surface-2)'; st.stroke = 'var(--ink-2)'; st.strokeWidth = String(lw * 0.85); }
+    if (textEl) textEl.style.fill = key === 'bad' || key === 'ink' ? 'var(--bg)' : key === 'info' || key === 'muted' ? 'var(--muted)' : 'var(--ink)';
   }
   function clamp(x, lo, hi) { return x < lo ? lo : x > hi ? hi : x; }
   function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
@@ -63,6 +83,70 @@
     if (stroke) { p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor'); p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round'); } else p.setAttribute('fill', 'currentColor');
     return svgEl;
   }
+  // Chip materialise (damping 1, response 0.25): scale 0.9 -> 1 and opacity 0 -> 1
+  // on one spring. A new target retargets from the live value, so a chip that is
+  // still appearing reverses smoothly, and nothing is ever locked.
+  function chipSpring(el) {
+    var sp = Fluid.spring({
+      value: 1, response: 0.25, damping: 1,
+      onUpdate: function (x) {
+        var u = clamp(x, 0, 1);
+        el.style.opacity = u >= 1 ? '' : u.toFixed(3);
+        el.style.transform = u >= 1 ? '' : 'scale(' + (0.9 + 0.1 * u).toFixed(4) + ')';
+      },
+      onRest: function (x) { if (x <= 0) el.hidden = true; },
+    });
+    return {
+      show: function () { if (el.hidden) { sp.set(0); el.hidden = false; } sp.to(1); },
+      hide: function () { if (!el.hidden) sp.to(0); },
+      // the chip's content changed: appear again, from wherever it is now
+      pop: function () { if (sp.value >= 1 && sp.target >= 1) sp.set(0); el.hidden = false; sp.to(1); },
+      jump: function (on) { sp.set(on ? 1 : 0); el.hidden = !on; },
+    };
+  }
+  // The counterexample well: a disclosure body on a height spring (damping 1,
+  // response 0.35) that reverses mid-flight from its live height.
+  function wellSpring(well, inner) {
+    var open = !well.hidden;
+    var running = false;
+    var sp = Fluid.spring({
+      value: 0, response: 0.35, damping: 1,
+      onUpdate: function (x) { well.style.height = Math.max(0, x).toFixed(1) + 'px'; },
+      onRest: function () { running = false; well.style.height = ''; if (!open) well.hidden = true; },
+    });
+    return {
+      get open() { return open; },
+      set: function (on, animate) {
+        if (on === open && !running) return;
+        open = on;
+        if (!animate) { sp.stop(); running = false; well.style.height = ''; well.hidden = !on; return; }
+        if (!running) sp.set(on ? 0 : well.offsetHeight);
+        well.hidden = false;
+        running = true;
+        sp.to(on ? inner.offsetHeight : 0);
+      },
+    };
+  }
+  // Press spring on a native slider thumb (1 -> 1.18, damping 1, response 0.18;
+  // back with damping 0.8, response 0.3). The thumb is a pseudo-element, so the
+  // spring writes --thumb-s, which the thumb's transform reads.
+  function thumbPress(input) {
+    var sp = Fluid.spring({ value: 1, response: 0.18, damping: 1, onUpdate: function (x) { input.style.setProperty('--thumb-s', x.toFixed(4)); } });
+    function up() {
+      if (!input.hasAttribute('data-pressed')) return;
+      input.removeAttribute('data-pressed');
+      sp.to(1, { response: 0.3, damping: 0.8 });
+    }
+    input.addEventListener('pointerdown', function (e) {
+      if (e.button > 0) return;
+      input.setAttribute('data-pressed', '');
+      if (!Fluid.reduce()) sp.to(1.18, { response: 0.18, damping: 1 });
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture', 'blur'].forEach(function (n) { input.addEventListener(n, up); });
+    document.addEventListener('pointerup', up);
+    return sp;
+  }
+  function press(el, scale) { if (window.Fluid) Fluid.pressable(el, scale ? { scale: scale } : null); return el; }
   function fmt(v, f) { return WM.formatValue(v, f); }
   function fmtTime(t) {
     var u = model.timeUnit || '';
@@ -102,12 +186,22 @@
   h('div', 'wm-kicker', 'Working model', head);
   h('h1', 'wm-title', model.title, head);
   var summaryEl = h('p', 'wm-summary', '', head);
-  var stamp = h('div', 'wm-stamp', null, head);
-  stamp.setAttribute('role', 'status');
-  stamp.setAttribute('aria-live', 'polite');
-  var stampIcon = h('span', null, null, stamp);
-  var stampText = h('span', null, '', stamp);
-  stampText.setAttribute('data-testid', 'claims-summary');
+  // The claims counter: "6 of 6 claims hold", or "5 of 6 claims hold · 1 fails"
+  // with the fails part as an inverse (L3) chip. It sits straight and never bounces.
+  var counter = h('div', 'wm-counter', null, head);
+  counter.setAttribute('role', 'status');
+  counter.setAttribute('aria-live', 'polite');
+  counter.setAttribute('data-testid', 'claims-counter');
+  var counterText = h('span', null, '', counter);
+  counterText.setAttribute('data-testid', 'claims-summary');
+  var counterSep = h('span', 'sep', '·', counter);
+  counterSep.setAttribute('aria-hidden', 'true');
+  var failChip = h('span', 'wm-chip l3', null, counter);
+  failChip.setAttribute('data-testid', 'claims-fails');
+  failChip.setAttribute('data-level', '3');
+  failChip.appendChild(icon('cross'));
+  var failChipText = h('span', null, '', failChip);
+  var failChipSp = chipSpring(failChip);
 
   var main = h('main', 'wm-main', null, root);
   var stage = h('section', 'wm-stage', null, main);
@@ -137,17 +231,23 @@
   bBack.type = 'button'; bBack.setAttribute('aria-label', 'Step back one tick'); bBack.appendChild(icon('back'));
   var bFwd = h('button', 'wm-btn', null, transport);
   bFwd.type = 'button'; bFwd.setAttribute('aria-label', 'Step forward one tick'); bFwd.appendChild(icon('fwd'));
+  press(bPlay); press(bBack); press(bFwd);
   var scrubWrap = h('div', 'wm-scrubwrap', null, transport);
+  scrubWrap.setAttribute('data-testid', 'scrubber');
   var marks = h('div', 'wm-marks', null, scrubWrap);
+  var track = h('div', 'wm-track', null, scrubWrap);
+  var trackFill = h('div', 'wm-track-fill', null, track);
   var scrub = h('input', 'wm-scrub', null, scrubWrap);
   scrub.type = 'range'; scrub.min = '0'; scrub.max = String(model.duration); scrub.step = 'any'; scrub.value = '0';
   scrub.setAttribute('aria-label', 'Time');
+  var thumb = h('div', 'wm-thumb', null, scrubWrap);
+  thumb.setAttribute('aria-hidden', 'true');
   var clock = h('span', 'wm-clock', '', transport);
   var speedBox = h('div', 'wm-speed', null, transport);
   speedBox.setAttribute('role', 'group');
   speedBox.setAttribute('aria-label', 'Playback speed');
   [0.5, 1, 2, 4].forEach(function (m) {
-    var b = h('button', null, (m === 0.5 ? '½' : m) + '×', speedBox);
+    var b = press(h('button', null, (m === 0.5 ? '½' : m) + '×', speedBox), 0.94);
     b.type = 'button';
     b.setAttribute('aria-pressed', m === 1 ? 'true' : 'false');
     b.setAttribute('aria-label', 'Speed ' + m + ' times');
@@ -161,11 +261,12 @@
   var claimsPanel = h('section', 'wm-panel wm-claims', null, side);
   claimsPanel.setAttribute('aria-label', 'Claims');
   var claimsH = h('h2', null, 'Claims', claimsPanel);
-  var claimsN = h('span', 'n', '', claimsH);
+  var claimsN = h('span', 'wm-chip l1', '', claimsH);
+  claimsN.setAttribute('data-level', '1');
   var claimsList = h('ol', null, null, claimsPanel);
   var claimResetRow = h('div', 'wm-reset-row', null, claimsPanel);
   h('p', null, 'A claim fails at these settings. The explanation only holds inside the range where its claims pass.', claimResetRow);
-  var bResetClaims = h('button', 'wm-btn wm-mini', null, claimResetRow);
+  var bResetClaims = press(h('button', 'wm-btn wm-mini', null, claimResetRow));
   bResetClaims.type = 'button'; bResetClaims.setAttribute('data-action', 'reset');
   bResetClaims.appendChild(icon('reset')); bResetClaims.appendChild(document.createTextNode('Reset parameters'));
   claimResetRow.hidden = true;
@@ -204,7 +305,7 @@
         group.setAttribute('data-param', p.id);
         group.id = id;
         pv.buttons = p.choices.map(function (label, i) {
-          var b = h('button', null, label, group);
+          var b = press(h('button', null, label, group), 0.96);
           b.type = 'button';
           b.setAttribute('role', 'radio');
           var val = p.min + i * p.step;
@@ -217,6 +318,7 @@
         input.type = 'range'; input.id = id; input.min = String(p.min); input.max = String(p.max); input.step = String(p.step);
         input.value = String(p.default);
         input.setAttribute('data-param', p.id);
+        thumbPress(input);
         var rng = h('div', 'range', null, row);
         h('span', null, fmt(p.min, p.format), rng);
         h('span', null, fmt(p.max, p.format), rng);
@@ -233,7 +335,7 @@
     });
     var pr = h('div', 'wm-reset-row', null, paramsPanel);
     h('p', null, 'Drag a slider and watch the claims re-check.', pr);
-    var bResetParams = h('button', 'wm-btn wm-mini', null, pr);
+    var bResetParams = press(h('button', 'wm-btn wm-mini', null, pr));
     bResetParams.type = 'button'; bResetParams.setAttribute('data-action', 'reset-params');
     bResetParams.appendChild(icon('reset')); bResetParams.appendChild(document.createTextNode('Reset'));
     bResetParams.addEventListener('click', resetParams);
@@ -283,14 +385,17 @@
     var text = h('p', 'text', '', body);
     var meta = h('div', 'meta', null, body);
     h('span', 'cid', kindLabel(c), meta);
-    var why = h('div', 'why', '', body);
-    var show = h('button', 'wm-btn wm-mini show', 'Show when it fails', body);
+    var well = h('div', 'well', null, body);
+    well.hidden = true;
+    var wellIn = h('div', 'well-in', null, well);
+    var why = h('div', 'why', '', wellIn);
+    var show = press(h('button', 'wm-btn wm-mini show', 'Show when it fails', wellIn));
     show.type = 'button';
     show.addEventListener('click', function () {
       var r = resultOf(c.id);
       if (r && r.counterexample && r.counterexample.t != null) { pause(); setTime(r.counterexample.t); }
     });
-    return { c: c, li: li, mark: mark, text: text, why: why, show: show, status: null };
+    return { c: c, li: li, mark: mark, markSp: chipSpring(mark), well: wellSpring(well, wellIn), text: text, why: why, show: show, status: null };
   });
   function kindLabel(c) {
     switch (c.kind) {
@@ -313,26 +418,35 @@
     var passed = check.passed;
     var total = check.total;
     var allPass = passed === total;
-    stampText.textContent = passed + '/' + total + ' claims pass';
-    stamp.setAttribute('data-status', allPass ? 'pass' : 'fail');
-    stampIcon.innerHTML = '';
-    stampIcon.appendChild(icon(allPass ? 'check' : 'cross'));
-    claimsN.textContent = passed + '/' + total + ' pass';
-    claimsN.classList.toggle('fail', !allPass);
+    var fails = total - passed;
+    var first = counter.getAttribute('data-passed') == null;
+    counterText.textContent = passed + ' of ' + total + ' claims hold';
+    counter.setAttribute('data-status', allPass ? 'pass' : 'fail');
+    counter.setAttribute('data-passed', String(passed));
+    counter.setAttribute('data-total', String(total));
+    counter.setAttribute('data-fails', String(fails));
+    if (fails > 0) failChipText.textContent = fails + ' fails';
+    counterSep.hidden = fails === 0;
+    if (first) failChipSp.jump(fails > 0); else if (fails > 0) failChipSp.show(); else failChipSp.hide();
+    claimsN.textContent = passed + ' of ' + total;
     claimViews.forEach(function (cv) {
       var r = resultOf(cv.c.id);
       if (!r) return;
+      var flipped = cv.status !== null && cv.status !== r.status;
       cv.text.textContent = r.text;
       cv.li.setAttribute('data-status', r.status);
-      cv.mark.innerHTML = '';
-      cv.mark.appendChild(icon(r.pass ? 'check' : 'cross'));
-      cv.mark.setAttribute('aria-label', r.pass ? 'passes' : 'fails');
-      cv.why.textContent = r.pass ? '' : r.line;
-      cv.show.hidden = !(r.counterexample && r.counterexample.t != null);
-      if (cv.status !== null && cv.status !== r.status) {
-        cv.li.classList.remove('flip'); void cv.li.offsetWidth; cv.li.classList.add('flip');
-        stamp.classList.remove('flip'); void stamp.offsetWidth; stamp.classList.add('flip');
+      if (flipped || cv.status === null) {
+        cv.mark.innerHTML = '';
+        cv.mark.appendChild(icon(r.pass ? 'check' : 'cross'));
       }
+      cv.mark.setAttribute('aria-label', r.pass ? 'passes' : 'fails');
+      cv.mark.setAttribute('data-level', r.pass ? '1' : '3');
+      if (!r.pass) cv.why.textContent = r.line;
+      cv.show.hidden = !(r.counterexample && r.counterexample.t != null);
+      // a claim that flips materialises its new state; the well opens or
+      // closes from its live height, so dragging back mid-flight reverses it
+      if (flipped) cv.markSp.pop();
+      cv.well.set(!r.pass, flipped);
       cv.status = r.status;
     });
     claimResetRow.hidden = allPass;
@@ -458,6 +572,7 @@
     }
   }
   function num(v, d) { return typeof v === 'number' && isFinite(v) ? v : d; }
+  function alarmOn(p, tn) { return tn === 'bad' && !(p.spec && typeof p.spec.tone === 'string' && TONE_SET[p.spec.tone]); }
 
   var views = [];
   // maps keyed by names from the spec have no prototype, so an emit or part
@@ -479,7 +594,6 @@
   }
 
   function frameBox(g, r) {
-    s('rect', { x: r.x + 4, y: r.y + 4, width: r.w, height: r.h, rx: 6, 'class': 'shade' }, g);
     var fr = s('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 6, 'class': 'frame' }, g);
     var pulse = s('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: 6, opacity: 0 }, g);
     pulse.style.pointerEvents = 'none';
@@ -534,7 +648,7 @@
       if (p.label) {
         var t = T_(g, 'p-label', 'label');
         t.el.style.paintOrder = 'stroke';
-        t.el.style.stroke = 'var(--card)';
+        t.el.style.stroke = 'var(--surface)';
         t.el.style.strokeWidth = '6px';
         t.el.style.strokeLinejoin = 'round';
         setText(t, p.label.toUpperCase());
@@ -544,7 +658,6 @@
     },
     box: function (v, g, r, p) {
       var f = frameBox(g, r);
-      v.bar = s('rect', { x: r.x, y: r.y + 6, width: 4, height: Math.max(0, r.h - 12), rx: 2, opacity: 0 }, g);
       makeLabel(v, g);
       v.text = T_(g, 'p-value', 'value');
       v.text.wrap = true;
@@ -558,7 +671,7 @@
       };
       v.update = function (fr) {
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone');
-        if (tn) { v.bar.style.fill = tone(tn); setAttr(v.bar, 'opacity', 1); } else setAttr(v.bar, 'opacity', 0);
+        f.frame.classList.toggle('alarm', alarmOn(p, tn));
         if (p.text) setText(v.text, evalB(p.text, fr.env0, '', p.id + '.text'));
         pulseFill(v, f.pulse, tn || 'accent', fr);
       };
@@ -578,7 +691,8 @@
       v.update = function (fr) {
         var val = evalB(p.value, fr.env0, 0, p.id + '.value');
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone');
-        v.text.el.style.fill = tn ? tone(tn) : 'var(--ink)';
+        v.text.el.style.fill = tn === 'muted' || tn === 'info' || tn === 'soft' ? 'var(--ink-2)' : 'var(--ink)';
+        f.frame.classList.toggle('alarm', alarmOn(p, tn));
         setText(v.text, fmt(val, p.format) + (p.unit ? ' ' + p.unit : ''));
         var since = v.changes ? sinceLast(v.changes, fr.k) : Infinity;
         var a = reduceMotion ? 0 : clamp(1 - (since * model.dt) / (0.3 * baseSpeed), 0, 1) * 0.6;
@@ -586,7 +700,7 @@
           var t0 = lastBefore(v.pulseTimes, fr.t);
           if (t0 != null && !reduceMotion) a = Math.max(a, clamp(1 - (fr.t - t0) / (0.4 * baseSpeed), 0, 1));
         }
-        f.pulse.style.fill = soft(tn || 'accent');
+        f.pulse.style.fill = PULSE;
         setAttr(f.pulse, 'opacity', a.toFixed(2));
       };
       v.recompute = function () {
@@ -632,7 +746,6 @@
           ' L' + (vx + vw - rad) + ',' + (vy + vh) + ' Q' + (vx + vw) + ',' + (vy + vh) + ' ' + (vx + vw) + ',' + (vy + vh - rad) + ' L' + (vx + vw) + ',' + vy;
         clipPathEl.setAttribute('d', vessel + ' Z');
         shell.textContent = '';
-        s('path', { d: vessel + ' Z', transform: 'translate(4,4)', 'class': 'shade' }, shell);
         s('path', { d: vessel + ' Z', 'class': 'frame' }, shell).style.stroke = 'none';
         outline.textContent = '';
         for (var i = 1; i < 4; i++) {
@@ -671,9 +784,11 @@
     lamp: function (v, g, r, p) {
       var f = frameBox(g, r);
       makeLabel(v, g);
-      v.glow = s('circle', { opacity: 0, 'class': 'glow' }, g);
       v.bulb = s('circle', { 'class': 'hair' }, g);
       v.bulb.style.strokeWidth = '1.5';
+      v.glyph = s('path', { fill: 'none', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+      v.glyph.style.stroke = 'var(--bg)';
+      v.glyph.style.vectorEffect = 'non-scaling-stroke';
       if (p.text) { v.text = T_(g, 'p-value', 'value'); v.texts.push(v.text); }
       v.layout = function () {
         layoutLabel(v);
@@ -685,17 +800,23 @@
         var rad = clamp(c.h / 2 - 3, 5, 15);
         var cx = c.x + rad + 2;
         var cy = c.y + c.h / 2;
-        v.glow.setAttribute('cx', cx); v.glow.setAttribute('cy', cy); v.glow.setAttribute('r', rad + 6);
+        v.geo = { cx: cx, cy: cy, rad: rad };
+        v.glyphKey = null;
         v.bulb.setAttribute('cx', cx); v.bulb.setAttribute('cy', cy); v.bulb.setAttribute('r', rad);
         if (v.text) place(v.text, cx + rad + 10, cy, r.x + r.w - (cx + rad + 10) - 8, 'start');
       };
       v.update = function (fr) {
         var on = evalB(p.on, fr.env0, false, p.id + '.on') === true;
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone') || 'ok';
-        v.bulb.style.fill = on ? tone(tn) : 'var(--card)';
-        v.bulb.style.stroke = on ? tone(tn) : 'var(--muted)';
-        v.glow.style.fill = tone(tn);
-        setAttr(v.glow, 'opacity', on ? 0.22 : 0);
+        v.bulb.style.fill = on ? (tn === 'bad' || tn === 'ink' ? 'var(--ink)' : 'var(--ink-2)') : 'var(--surface)';
+        v.bulb.style.stroke = on ? 'var(--ink)' : 'var(--muted)';
+        var gk = on ? (tn === 'bad' ? 'cross' : tn === 'ok' ? 'check' : '') : '';
+        if (gk !== v.glyphKey && v.geo) {
+          v.glyphKey = gk;
+          var G = v.geo, q = G.rad * 0.42;
+          v.glyph.setAttribute('d', gk === 'cross' ? 'M' + (G.cx - q) + ',' + (G.cy - q) + 'L' + (G.cx + q) + ',' + (G.cy + q) + 'M' + (G.cx + q) + ',' + (G.cy - q) + 'L' + (G.cx - q) + ',' + (G.cy + q)
+            : gk === 'check' ? 'M' + (G.cx - q * 1.1) + ',' + (G.cy + q * 0.05) + 'L' + (G.cx - q * 0.3) + ',' + (G.cy + q * 0.8) + 'L' + (G.cx + q * 1.1) + ',' + (G.cy - q * 0.75) : '');
+        }
         if (p.text) setText(v.text, evalB(p.text, fr.env0, '', p.id + '.text'));
         pulseFill(v, f.pulse, tn, fr);
       };
@@ -704,13 +825,13 @@
       var f = frameBox(g, r);
       makeLabel(v, g);
       var track = s('path', { fill: 'none', 'stroke-width': 9, 'stroke-linecap': 'round' }, g);
-      track.style.stroke = 'var(--rule-strong)';
+      track.style.stroke = 'var(--line-strong)';
       v.zones = s('g', null, g);
       v.val = s('path', { d: '', fill: 'none', 'stroke-width': 9, 'stroke-linecap': 'round' }, g);
       v.needle = s('line', { 'class': 'hair' }, g);
       v.needle.style.strokeWidth = '2';
       var hub = s('circle', { r: 4 }, g);
-      hub.style.fill = 'var(--line)';
+      hub.style.fill = 'var(--ink-2)';
       v.text = T_(g, 'p-big', 'value');
       v.texts.push(v.text);
       function arc(G, a0, a1, rr) {
@@ -749,7 +870,7 @@
         var ang = Math.PI + u * Math.PI;
         setAttr(v.val, 'd', u > 0.002 ? arc(G, Math.PI, ang, G.rad) : '');
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone') || 'accent';
-        v.val.style.stroke = tone(tn, 'accent');
+        v.val.style.stroke = tn === 'bad' || tn === 'ink' ? 'var(--ink)' : 'var(--ink-2)';
         setAttr(v.needle, 'x1', G.cx.toFixed(2)); setAttr(v.needle, 'y1', G.cy.toFixed(2));
         setAttr(v.needle, 'x2', (G.cx + (G.rad - 2) * Math.cos(ang)).toFixed(2));
         setAttr(v.needle, 'y2', (G.cy + (G.rad - 2) * Math.sin(ang)).toFixed(2));
@@ -760,8 +881,9 @@
           (p.zones || []).forEach(function (z) {
             var z0 = Math.PI + clamp((z.from - lo) / (hi - lo), 0, 1) * Math.PI;
             var z1 = Math.PI + clamp((z.to - lo) / (hi - lo), 0, 1) * Math.PI;
-            var zp = s('path', { d: arc(G, z0, z1, G.rad + 8), fill: 'none', 'stroke-width': 3 }, v.zones);
-            zp.style.stroke = tone(z.tone, 'muted');
+            var zp = s('path', { d: arc(G, z0, z1, G.rad + 8), fill: 'none', 'stroke-width': z.tone === 'bad' ? 3 : 2 }, v.zones);
+            zp.style.stroke = z.tone === 'bad' ? 'var(--ink)' : z.tone === 'warn' ? 'var(--ink-2)' : 'var(--line-strong)';
+            if (z.tone === 'warn') zp.style.strokeDasharray = '3 2';
           });
         }
         setText(v.text, fmt(a, p.format) + (p.unit ? ' ' + p.unit : ''));
@@ -806,10 +928,13 @@
         v.pills.forEach(function (pl) {
           var on = pl.st.id === cur;
           pl.rect.parentNode.style.display = v.single && !on ? 'none' : '';
-          var tn = pl.st.tone || 'accent';
-          pl.rect.style.fill = on ? tone(tn) : 'transparent';
-          pl.rect.style.stroke = on ? tone(tn) : 'var(--muted)';
-          pl.t.el.style.fill = on ? 'var(--card)' : 'var(--ink-2)';
+          var lv = on ? (pl.st.tone === 'muted' || pl.st.tone === 'info' ? 1 : pl.st.tone === 'warn' ? 2 : pl.st.tone === 'soft' ? 0 : 3) : -1;
+          pl.rect.style.fill = lv === 3 ? 'var(--ink)' : lv === 1 ? 'var(--surface-2)' : 'transparent';
+          pl.rect.style.stroke = lv === 3 || lv === 2 ? 'var(--ink)' : 'var(--line-strong)';
+          pl.rect.style.strokeWidth = lv === 2 ? '2' : '1.5';
+          pl.rect.style.strokeDasharray = lv === 0 ? '3 2' : '';
+          pl.rect.parentNode.setAttribute('data-level', String(lv));
+          pl.t.el.style.fill = lv === 3 ? 'var(--bg)' : lv === 2 ? 'var(--ink)' : lv === 1 ? 'var(--ink-2)' : 'var(--muted)';
           pl.t.el.style.fontWeight = on ? '700' : '500';
         });
         pulseFill(v, f.pulse, 'accent', fr);
@@ -874,9 +999,9 @@
           var tn = p.tones && own(p.tones, key) ? p.tones[key] : null;
           var filled = tn != null || val === true || (typeof val === 'number' && val !== 0) || (typeof val === 'string' && val !== '');
           if (tn == null) tn = 'accent';
-          c.rect.style.fill = filled ? soft(tn) : 'transparent';
-          c.rect.style.stroke = marked[i] ? 'var(--accent)' : filled ? tone(tn) : 'var(--rule-strong)';
-          c.rect.style.strokeWidth = marked[i] ? '2.5' : '1';
+          if (filled) paintTone(c.rect, c.t.el, tn, 1.25);
+          else { c.rect.style.fill = 'transparent'; c.rect.style.stroke = 'var(--line-strong)'; c.rect.style.strokeWidth = '1'; c.rect.style.strokeDasharray = ''; c.t.el.style.fill = ''; }
+          if (marked[i]) { c.rect.style.stroke = 'var(--ink)'; c.rect.style.strokeWidth = '2.5'; c.rect.style.strokeDasharray = ''; }
           var show = p.showValues && val !== null && val !== false && val !== '' && !(typeof val === 'number' && val === 0 && !p.tones) && c.size * scale >= 13;
           setText(c.t, show ? (typeof val === 'boolean' ? '1' : fmt(val)) : '');
         });
@@ -898,6 +1023,7 @@
         setText(v.text, evalB(p.text, fr.env0, '', p.id + '.text'));
         var tn = evalB(p.tone, fr.env0, null, p.id + '.tone');
         v.text.el.style.fill = tn ? tone(tn) : '';
+        v.text.el.style.fontWeight = tn === 'bad' ? '700' : '';
       };
     },
     chart: function (v, g, r, p) { chartMaker(v, g, r, p); },
@@ -908,7 +1034,7 @@
       if (p.label) {
         v.text = T_(g, 'p-small', 'small');
         v.text.el.style.paintOrder = 'stroke';
-        v.text.el.style.stroke = 'var(--card)';
+        v.text.el.style.stroke = 'var(--surface)';
         v.text.el.style.strokeWidth = '5px';
         setText(v.text, p.label);
         v.texts.push(v.text);
@@ -1000,7 +1126,7 @@
     if (!el || !v.pulseTimes) return;
     var t = lastBefore(v.pulseTimes, fr.t);
     var a = t == null || reduceMotion ? 0 : clamp(1 - (fr.t - t) / (0.4 * baseSpeed), 0, 1);
-    el.style.fill = soft(tn);
+    el.style.fill = PULSE;
     setAttr(el, 'opacity', (a * 0.95).toFixed(2));
   }
   function lastBefore(times, t) {
@@ -1083,7 +1209,7 @@
     function drawChip(c, q, x, y, tn, label, op) {
       setAttr(c.rect, 'x', (x + 1).toFixed(2)); setAttr(c.rect, 'y', (y + 1).toFixed(2));
       setAttr(c.rect, 'width', Math.max(1, q.w - 2).toFixed(2)); setAttr(c.rect, 'height', Math.max(1, q.h - 2).toFixed(2));
-      c.rect.style.fill = soft(tn); c.rect.style.stroke = tone(tn, 'accent');
+      paintTone(c.rect, c.t.el, tn);
       setAttr(c.t.el, 'x', (x + q.w / 2).toFixed(2)); setAttr(c.t.el, 'y', (y + q.h / 2 + 0.5).toFixed(2));
       var mw = q.w - 6;
       var base = Math.min(14, q.h * 0.5);
@@ -1107,7 +1233,7 @@
         for (var i = 0; i < shown; i++) {
           var q = G(i);
           var sr = s('rect', { x: q.x, y: q.y, width: q.w, height: q.h, rx: 5 }, v.slotsG);
-          sr.style.fill = 'none'; sr.style.stroke = 'var(--rule-strong)'; sr.style.strokeDasharray = '3 3'; sr.style.vectorEffect = 'non-scaling-stroke';
+          sr.style.fill = 'none'; sr.style.stroke = 'var(--line-strong)'; sr.style.strokeDasharray = '3 3'; sr.style.vectorEffect = 'non-scaling-stroke';
         }
         v.slotCount = shown;
       }
@@ -1160,31 +1286,33 @@
     setText(v.x1, fmt(model.duration) + (model.timeUnit ? ' ' + model.timeUnit : ''));
     v.refsG = s('g', null, g);
     v.refTexts = [];
+    // Series are ink lines told apart by dash pattern (solid, 6-3 dash, 2-3
+    // dot, ...) and named at the line end, not by colour and a legend.
+    var DASH = ['', '6 3', '2 3', '10 3 2 3', '1 4'];
     v.series = p.series.map(function (se, i) {
-      var tn = se.tone || (i === 0 ? 'accent' : ['ink', 'warn', 'ok', 'bad', 'info'][(i - 1) % 5]);
+      var dash = DASH[i % DASH.length];
       var area = i === 0 && p.series.length === 1 ? s('path', { 'class': 'chart-area' }, g) : null;
-      if (area) area.style.fill = tone(tn, 'accent');
-      var ghost = s('path', { 'class': 'chart-ghost' }, g);
-      ghost.style.stroke = tone(tn, 'accent');
-      var line = s('path', { 'class': 'chart-line' }, g);
-      line.style.stroke = tone(tn, 'accent');
+      var ghost = s('path', { 'class': 'chart-ghost', 'stroke-dasharray': dash || null }, g);
+      var line = s('path', { 'class': 'chart-line', 'stroke-dasharray': dash || null, 'data-dash': dash || 'solid' }, g);
       var dot = s('circle', { r: 4 }, g);
-      dot.style.fill = tone(tn, 'accent');
-      dot.style.stroke = 'var(--card)';
+      dot.style.fill = 'var(--ink)';
+      dot.style.stroke = 'var(--surface)';
       dot.style.strokeWidth = '1.5';
-      return { se: se, tn: tn, area: area, ghost: ghost, line: line, dot: dot, vals: [] };
+      return { se: se, dash: dash, area: area, ghost: ghost, line: line, dot: dot, vals: [] };
     });
     v.legend = [];
+    v.ends = [];
     if (p.series.length > 1) {
       v.series.forEach(function (se) {
-        var t = T_(g, 'p-small', 'small');
+        var key = s('line', { 'class': 'chart-line', 'stroke-dasharray': se.dash || null }, g);
+        key.style.strokeWidth = '1.5';
+        var t = T_(g, 'chart-end', 'small');
         setText(t, se.se.label || '');
-        var sw = s('rect', { width: 12, height: 3, rx: 1.5 }, g);
-        sw.style.fill = tone(se.tn, 'accent');
-        v.legend.push({ t: t, sw: sw });
+        v.ends.push({ t: t, key: key, se: se });
         v.texts.push(t);
       });
     }
+    v.endW = v.ends.reduce(function (a, E) { return Math.max(a, (E.t.str || '').length * U('small') * 0.62); }, 0);
     v.playhead = s('line', { 'class': 'playhead' }, g);
     var plot = { x: 0, y: 0, w: 1, h: 1 };
     v.plot = plot;
@@ -1195,7 +1323,8 @@
       var yLabW = U('small') * 3.2;
       plot.x = r.x + 10 + yLabW;
       plot.y = top + U('small') * 0.3;
-      plot.w = r.x + r.w - 12 - plot.x;
+      var endCol = v.ends.length ? Math.min(v.endW, r.w * 0.32) + 26 : 0;
+      plot.w = r.x + r.w - 12 - endCol - plot.x;
       plot.h = r.y + r.h - 6 - U('small') * 1.4 - plot.y;
       axisX.setAttribute('x1', plot.x); axisX.setAttribute('x2', plot.x + plot.w);
       axisX.setAttribute('y1', plot.y + plot.h); axisX.setAttribute('y2', plot.y + plot.h);
@@ -1206,30 +1335,45 @@
       place(v.yLo, plot.x - 6, plot.y + plot.h - U('small') * 0.3, yLabW - 4, 'end');
       place(v.x0, plot.x, r.y + r.h - 6 - U('small') * 0.6, plot.w / 3, 'start');
       place(v.x1, plot.x + plot.w, r.y + r.h - 6 - U('small') * 0.6, plot.w / 3, 'end');
-      v.legendY = r.y + 6 + U('label') * (0.62 + (v.legendRow2 ? 1.3 : 0));
-      v.legend.forEach(function (L) { place(L.t, 0, v.legendY, null, 'end'); });
+      v.ends.forEach(function (E) { place(E.t, plot.x + plot.w + 24, plot.y + plot.h / 2, Math.min(v.endW, r.w * 0.32) + 2, 'start'); });
       if (trace) v.redrawStatic();
     };
-    v.afterFit = function () {
-      // legend sits at the right end of the label row, last series rightmost
-      var x = r.x + r.w - 12;
-      var labelRight = v.labelText ? r.x + 10 + safeLen(v.labelText) + 12 : r.x + 10;
-      for (var i = v.legend.length - 1; i >= 0; i--) {
-        var L = v.legend[i];
-        var w = safeLen(L.t);
-        L.t.el.setAttribute('x', x.toFixed(1));
-        L.sw.setAttribute('x', (x - w - 17).toFixed(1));
-        L.sw.setAttribute('y', (v.legendY - 1.5).toFixed(1));
-        x -= w + 32;
+    // End labels sit at the height where each line ends, pushed apart so they never overlap.
+    function placeEnds() {
+      if (!v.ends.length || !trace) return;
+      var gap = U('small') * 1.3;
+      var lo = plot.y + U('small') * 0.55;
+      var hi = plot.y + plot.h - U('small') * 0.55;
+      var items = v.ends.map(function (E) {
+        var vals = E.se.vals;
+        var last = NaN;
+        for (var k = vals.length - 1; k >= 0 && !isFinite(last); k--) last = vals[k];
+        return { E: E, y: isFinite(last) ? clamp(yOf(last), lo, hi) : hi };
+      });
+      items.sort(function (a, b) { return a.y - b.y; });
+      for (var i = 1; i < items.length; i++) items[i].y = Math.max(items[i].y, items[i - 1].y + gap);
+      if (items.length && items[items.length - 1].y > hi) {
+        items[items.length - 1].y = hi;
+        for (var j = items.length - 2; j >= 0; j--) items[j].y = Math.min(items[j].y, items[j + 1].y - gap);
       }
-      var crowded = !v.legendRow2 && x + 20 < labelRight;
-      if (crowded) {
-        // not enough room beside the label: give the legend its own row
-        v.legendRow2 = true;
+      items.forEach(function (it) {
+        var x0 = plot.x + plot.w + 6;
+        it.E.t.el.setAttribute('x', (x0 + 18).toFixed(1));
+        it.E.t.el.setAttribute('y', it.y.toFixed(1));
+        setAttr(it.E.key, 'x1', x0.toFixed(1)); setAttr(it.E.key, 'x2', (x0 + 13).toFixed(1));
+        setAttr(it.E.key, 'y1', it.y.toFixed(1)); setAttr(it.E.key, 'y2', it.y.toFixed(1));
+      });
+    }
+    v.afterFit = function () {
+      // size the end-label column to the longest label, then lay out once more
+      if (!v.ends.length) return;
+      var w = v.ends.reduce(function (a, E) { return Math.max(a, safeLen(E.t)); }, 0);
+      if (w && Math.abs(w - v.endW) > 1) {
+        v.endW = w;
         v.layout();
         v.texts.forEach(fit);
-        v.afterFit();
       }
+      placeEnds();
     };
     function safeLen(t) { try { return t.el.getComputedTextLength(); } catch (e) { return 0; } }
     function niceCeil(x) {
@@ -1279,12 +1423,13 @@
           var below = y - plot.y < U('small') * 1.4;
           place(t, plot.x + plot.w - 6, below ? y + U('small') * 0.85 : y - U('small') * 0.75, plot.w / 2, 'end');
           t.el.style.fill = tone(rf.tone, 'muted');
-          t.el.style.paintOrder = 'stroke'; t.el.style.stroke = 'var(--card)'; t.el.style.strokeWidth = '4px';
+          t.el.style.paintOrder = 'stroke'; t.el.style.stroke = 'var(--surface)'; t.el.style.strokeWidth = '4px';
           setText(t, rf.label);
           v.refTexts.push(t);
         }
       });
       v.series.forEach(function (se) { setAttr(se.ghost, 'd', pathFor(se.vals, trace.K, p.step)); });
+      placeEnds();
     };
     v.recompute = function () {
       var K = trace.K;
@@ -1356,13 +1501,9 @@
   function particle() {
     if (particleUsed < particlePool.length) return particlePool[particleUsed++];
     var g = s('g', null, layerParticles);
-    var halo = s('circle', { r: 9, opacity: 0.2 }, g);
-    var t1 = s('circle', { r: 3.2, opacity: 0.35 }, g);
-    var t2 = s('circle', { r: 2.2, opacity: 0.18 }, g);
     var core = s('circle', { r: 5.2 }, g);
-    core.style.stroke = 'var(--card)';
-    core.style.strokeWidth = '1.5';
-    var pt = { g: g, halo: halo, t1: t1, t2: t2, core: core };
+    core.style.vectorEffect = 'non-scaling-stroke';
+    var pt = { g: g, core: core, kind: null };
     particlePool.push(pt);
     particleUsed++;
     return pt;
@@ -1416,21 +1557,18 @@
         var pt = particle();
         var tm = v.part.toneMap;
         var tn = tm && own(tm, pp.name) ? tm[pp.name] : (typeof v.part.spec.tone === 'string' ? v.part.spec.tone : 'accent');
-        var col = tone(tn, 'accent');
+        var kind = tn === 'bad' ? 'rejected' : 'accepted';
         var pos = reduceMotion ? v.pointAt(0.5) : v.pointAt(e);
-        var p1 = v.pointAt(Math.max(0, e - 0.05));
-        var p2 = v.pointAt(Math.max(0, e - 0.1));
         pt.g.style.display = '';
-        pt.core.style.fill = col; pt.halo.style.fill = col; pt.t1.style.fill = col; pt.t2.style.fill = col;
+        if (pt.kind !== kind) {
+          pt.kind = kind;
+          pt.g.setAttribute('data-kind', kind);
+          if (kind === 'rejected') { pt.core.style.fill = 'var(--surface)'; pt.core.style.stroke = 'var(--ink)'; pt.core.style.strokeWidth = '1.75'; setAttr(pt.core, 'r', 4.6); }
+          else { pt.core.style.fill = 'var(--ink)'; pt.core.style.stroke = 'var(--surface)'; pt.core.style.strokeWidth = '1.5'; setAttr(pt.core, 'r', 5.2); }
+        }
         setAttr(pt.core, 'cx', pos[0].toFixed(1)); setAttr(pt.core, 'cy', pos[1].toFixed(1));
-        setAttr(pt.halo, 'cx', pos[0].toFixed(1)); setAttr(pt.halo, 'cy', pos[1].toFixed(1));
-        setAttr(pt.t1, 'cx', p1[0].toFixed(1)); setAttr(pt.t1, 'cy', p1[1].toFixed(1));
-        setAttr(pt.t2, 'cx', p2[0].toFixed(1)); setAttr(pt.t2, 'cy', p2[1].toFixed(1));
         var fade = u > 0.85 ? (1 - u) / 0.15 : 1;
         setAttr(pt.g, 'opacity', fade.toFixed(2));
-        pt.halo.style.display = reduceMotion ? 'none' : '';
-        pt.t1.style.display = reduceMotion ? 'none' : '';
-        pt.t2.style.display = reduceMotion ? 'none' : '';
         drawn++;
       }
     });
@@ -1538,7 +1676,7 @@
         cap.cites.forEach(function (id) {
           var r = resultOf(id);
           var idx = model.claims.findIndex(function (c) { return c.id === id; });
-          var b = h('button', 'wm-cite', null, capCites);
+          var b = press(h('button', 'wm-cite', null, capCites), 0.94);
           b.type = 'button';
           b.setAttribute('data-status', r && r.pass ? 'pass' : 'fail');
           b.appendChild(icon(r && r.pass ? 'check' : 'cross'));
@@ -1560,7 +1698,7 @@
       capCites.textContent = '';
     }
     scrub.value = String(t);
-    scrub.style.setProperty('--fill', (t / model.duration * 100) + '%');
+    drawThumb();
     // the clock names the tick whose values are on screen; rounding t itself
     // showed "t = 5 s" beside the values of t = 4 when dt is 1
     clock.textContent = fmtTime(k * model.dt);
@@ -1618,7 +1756,59 @@
   bPlay.addEventListener('click', function () { if (playing) pause(); else play(); });
   bBack.addEventListener('click', function () { step(-1); });
   bFwd.addEventListener('click', function () { step(1); });
+  // keyboard and assistive tech drive the native input; the pointer drives the drawn thumb
   scrub.addEventListener('input', function () { playing = false; T = Number(scrub.value); render(); });
+
+  // ------------------------------------------------------------ scrubber --
+  // Pointer capture, the grab offset kept, 1:1 tracking. Past either end the
+  // thumb rubber-bands (Fluid.rubber); on release it springs back inside the
+  // track (damping 1, response 0.4) carrying the release velocity. No momentum
+  // projection: a timeline needs precision.
+  var scrubOver = 0;
+  var thumbScale = 1;
+  var overSp = Fluid.spring({ value: 0, response: 0.4, damping: 1, onUpdate: function (x) { scrubOver = x; drawThumb(); } });
+  var thumbSp = Fluid.spring({ value: 1, response: 0.18, damping: 1, onUpdate: function (x) { thumbScale = x; drawThumb(); } });
+  var scrubVel = Fluid.velocityTracker();
+  var drag = null;
+  function drawThumb() {
+    var w = track.clientWidth || 0;
+    var f = clamp(T / model.duration, 0, 1);
+    trackFill.style.transform = 'scaleX(' + f.toFixed(4) + ')';
+    thumb.style.transform = 'translateX(' + (f * w + scrubOver).toFixed(2) + 'px)' + (thumbScale !== 1 ? ' scale(' + thumbScale.toFixed(4) + ')' : '');
+  }
+  function dragTo(x) {
+    var r = track.getBoundingClientRect();
+    var w = Math.max(1, r.width);
+    var raw = x - drag.grab - r.left;
+    var over = raw < 0 ? Fluid.rubber(raw, w) : raw > w ? Fluid.rubber(raw - w, w) : 0;
+    scrubVel.add(over);
+    overSp.set(over);
+    setTime(clamp(raw / w, 0, 1) * model.duration);
+  }
+  function endDrag() {
+    if (!drag) return;
+    drag = null;
+    scrubWrap.removeAttribute('data-pressed');
+    thumbSp.to(1, { response: 0.3, damping: 0.8 });
+    overSp.to(0, { velocity: scrubVel.get() });
+  }
+  scrubWrap.addEventListener('pointerdown', function (e) {
+    if (e.button > 0) return;
+    e.preventDefault();
+    var r = track.getBoundingClientRect();
+    var thumbX = r.left + clamp(T / model.duration, 0, 1) * r.width;
+    // grabbing the thumb keeps the finger's offset from its centre; pressing the bare track brings the thumb under the pointer
+    drag = { id: e.pointerId, grab: Math.abs(e.clientX - thumbX) <= 14 ? e.clientX - thumbX : 0 };
+    try { scrubWrap.setPointerCapture(e.pointerId); } catch (err) { /* a synthetic event has no capture */ }
+    scrubWrap.setAttribute('data-pressed', '');
+    if (playing) pause();
+    scrubVel.reset();
+    overSp.stop();
+    if (!Fluid.reduce()) thumbSp.to(1.18, { response: 0.18, damping: 1 });
+    dragTo(e.clientX);
+  });
+  scrubWrap.addEventListener('pointermove', function (e) { if (drag && e.pointerId === drag.id) dragTo(e.clientX); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (n) { scrubWrap.addEventListener(n, function (e) { if (drag && e.pointerId === drag.id) endDrag(); }); });
   document.addEventListener('keydown', function (e) {
     var tg = e.target;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -1708,7 +1898,7 @@
     }
     var vw = document.documentElement.clientWidth;
     if (document.documentElement.scrollWidth > vw + 1) add('E_PAGE_OVERFLOW', 'the page scrolls sideways (' + document.documentElement.scrollWidth + 'px content in a ' + vw + 'px window)');
-    var htmlText = root.querySelectorAll('.wm-title, .wm-summary, .wm-caption-text, .wm-claim .text, .wm-claim .why, .wm-param label, .wm-btn, .wm-clock, .wm-stamp');
+    var htmlText = root.querySelectorAll('.wm-title, .wm-summary, .wm-caption-text, .wm-claim .text, .wm-claim .why, .wm-param label, .wm-btn, .wm-clock, .wm-counter');
     Array.prototype.forEach.call(htmlText, function (e) {
       if (e.offsetParent === null) return;
       var rb = e.getBoundingClientRect();

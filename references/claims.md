@@ -94,7 +94,7 @@ A quick test for a restatement: find the line of rule code the claim checks. If 
 
 **Make the sentence say exactly what the expression checks.** `check` tests the expression, not the sentence. "The lead grows with every payment" over an expression that allows `>=` is false at the first payment, where the lead stays zero.
 
-**Make at least one claim breakable.** Readers learn where an explanation stops holding by pushing a slider until a claim turns red. `check` prints which slider positions break which claims; lint warns when none do (`W_NOT_BREAKABLE`). A claim that holds for every slider position is fine as well, and a `sweep` is the way to say so.
+**Make at least one claim breakable.** Readers learn where an explanation stops holding by pushing a slider until a claim fails. `check` prints which slider positions break which claims; lint warns when none do (`W_NOT_BREAKABLE`). A claim that holds for every slider position is fine as well, and a `sweep` is the way to say so.
 
 **Bind every number.** Write `{capacity}` and `{capacity + 1:ord}`, not 10 and 11th. Then the text stays true as sliders move, and a claim that fails really fails.
 

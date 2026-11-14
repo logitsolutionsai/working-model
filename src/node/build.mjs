@@ -61,7 +61,9 @@ function escapeHtml(s) {
 // static summary shown before the script runs).
 export function renderPage(spec, opts = {}) {
   const css = fs.readFileSync(path.join(PAGE_DIR, 'page.css'), 'utf8');
-  const runtime = fs.readFileSync(path.join(PAGE_DIR, 'runtime.js'), 'utf8');
+  // fluid.js (springs and pointer helpers, a verbatim copy of brand-kit/fluid.js)
+  // runs first in the same script, so the runtime can use its global Fluid.
+  const runtime = fs.readFileSync(path.join(PAGE_DIR, 'fluid.js'), 'utf8') + '\n' + fs.readFileSync(path.join(PAGE_DIR, 'runtime.js'), 'utf8');
   const json = JSON.stringify(spec).replace(/</g, String.fromCharCode(92) + "u003c"); // no "</script>" can end the block early
   const title = escapeHtml(spec.title || 'Working model');
   // The CSP allows exactly these two scripts by hash, not 'unsafe-inline', so

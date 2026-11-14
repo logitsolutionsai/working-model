@@ -61,7 +61,7 @@ You ask: *"Explain how a token bucket rate limiter works."*
    $ working-model layout token-bucket.model.json
    ```
 
-5. You open `token-bucket.html`, offline. Press play, scrub through time, step tick by tick with the arrow keys, and drag any slider. Every claim re-checks on the spot. Push the burst below the bucket size and "the first 10 requests pass" turns red, because there were never 10 requests: that is where the explanation stops holding.
+5. You open `token-bucket.html`, offline. Press play, scrub through time, step tick by tick with the arrow keys, and drag any slider. Every claim re-checks on the spot. Push the burst below the bucket size and "the first 10 requests pass" fails, because there were never 10 requests: that is where the explanation stops holding.
 
 A longer worked example, step by step: [references/walkthrough.md](../references/walkthrough.md).
 

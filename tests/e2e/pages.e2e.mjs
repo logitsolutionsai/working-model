@@ -61,9 +61,12 @@ describe('every example in the browser', () => {
       const before = requests.length;
       const { page, context, errors } = await openPage(node.spec);
       try {
-        // the claims panel shows N/N, computed in the page, and agrees claim by claim with Node
+        // the header counter reads "N of N claims hold", computed in the page, and agrees claim by claim with Node
         const summary = await page.textContent('[data-testid="claims-summary"]');
-        assert.equal(summary.trim(), `${node.total}/${node.total} claims pass`);
+        assert.equal(summary.trim(), `${node.total} of ${node.total} claims hold`);
+        const counter = await page.$eval('[data-testid="claims-counter"]', (e) => ({ passed: e.dataset.passed, total: e.dataset.total, fails: e.dataset.fails, status: e.dataset.status }));
+        assert.deepEqual(counter, { passed: String(node.total), total: String(node.total), fails: '0', status: 'pass' });
+        assert.equal(await page.isVisible('[data-testid="claims-fails"]'), false, 'no fails chip when every claim holds');
         const statuses = await page.$$eval('[data-claim-id]', (els) => els.map((e) => [e.getAttribute('data-claim-id'), e.getAttribute('data-status')]));
         assert.deepEqual(statuses, node.results.map((r) => [r.id, r.status]));
         const fromPage = await page.evaluate(() => window.workingModel.getSummary());
@@ -143,8 +146,17 @@ describe('dragging a slider flips a claim, and reset restores it', () => {
         const why = await claim.locator('.why').textContent();
         assert.ok(why.length > 10, 'a one-line counterexample is shown');
         const summary = await page.textContent('[data-testid="claims-summary"]');
-        assert.match(summary, /^\d+\/\d+ claims pass$/);
-        assert.notEqual(summary.trim(), `${spec.claims.length}/${spec.claims.length} claims pass`);
+        assert.match(summary, /^\d+ of \d+ claims hold$/);
+        assert.notEqual(summary.trim(), `${spec.claims.length} of ${spec.claims.length} claims hold`);
+        // the fails part is an inverse (L3) chip that says how many fail, and the failing row's mark is one too
+        const fails = await page.$eval('[data-testid="claims-counter"]', (e) => Number(e.dataset.total) - Number(e.dataset.passed));
+        assert.ok(fails > 0);
+        assert.equal(await page.$eval('[data-testid="claims-counter"]', (e) => e.dataset.fails), String(fails));
+        await page.waitForSelector('[data-testid="claims-fails"]', { state: 'visible' });
+        assert.equal((await page.textContent('[data-testid="claims-fails"]')).trim(), `${fails} fails`);
+        assert.equal(await page.getAttribute('[data-testid="claims-fails"]', 'data-level'), '3');
+        assert.equal(await claim.locator('.mark').getAttribute('data-level'), '3');
+        assert.ok(await claim.locator('.why').isVisible(), 'the counterexample well is open');
         await page.screenshot({ path: path.join(OUT, `${f.example}-flipped.png`) });
         // what the page computed equals what Node computes at the same params
         const params = await page.evaluate(() => window.workingModel.getParams());
@@ -155,7 +167,9 @@ describe('dragging a slider flips a claim, and reset restores it', () => {
         // reset brings it back
         await page.click('[data-action="reset"]');
         await page.waitForFunction((id) => document.querySelector(`[data-claim-id="${id}"]`).getAttribute('data-status') === 'pass', f.claim);
-        assert.equal((await page.textContent('[data-testid="claims-summary"]')).trim(), `${spec.claims.length}/${spec.claims.length} claims pass`);
+        assert.equal((await page.textContent('[data-testid="claims-summary"]')).trim(), `${spec.claims.length} of ${spec.claims.length} claims hold`);
+        await page.waitForSelector('[data-testid="claims-fails"]', { state: 'hidden' });
+        assert.equal(await claim.locator('.mark').getAttribute('data-level'), '1');
         assert.deepEqual(errors, []);
       } finally {
         await context.close();
@@ -294,6 +308,82 @@ describe('the mutation score in the page', () => {
   });
 });
 
+describe('direct manipulation', () => {
+  // pointerdown on a slider scales its thumb (a press spring) within 50 ms. The
+  // native thumb is a pseudo-element, so the spring writes --thumb-s, which the
+  // thumb's transform reads; the timeline scrubber's drawn thumb is transformed directly.
+  test('pointerdown on a slider transforms its thumb within 50 ms', async () => {
+    const spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'examples', 'token-bucket.model.json'), 'utf8'));
+    const { page, context, errors } = await openPage(spec);
+    try {
+      const watch = (sel, kind) => page.evaluate(([s, k]) => {
+        const el = document.querySelector(s);
+        const read = k === 'native'
+          ? () => { const v = parseFloat(getComputedStyle(el).getPropertyValue('--thumb-s')); return v > 1.001 ? v : null; }
+          : () => { const tr = document.querySelector('.wm-thumb').style.transform; return /scale\(/.test(tr) ? tr : null; };
+        window.__press = null;
+        el.addEventListener('pointerdown', () => {
+          const t0 = performance.now();
+          (function poll() {
+            const v = read();
+            if (v) window.__press = { ms: performance.now() - t0, v };
+            else if (performance.now() - t0 > 1000) window.__press = { ms: 1e9, v };
+            else requestAnimationFrame(poll);
+          })();
+        }, { capture: true, once: true });
+      }, [sel, kind]);
+
+      // a parameter slider (the native input)
+      const sel = 'input[type="range"][data-param="burst"]';
+      await watch(sel, 'native');
+      await page.locator(sel).scrollIntoViewIfNeeded();
+      const box = await page.locator(sel).boundingBox();
+      const v = await page.$eval(sel, (el) => (Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min)));
+      await page.mouse.move(box.x + 9 + v * (box.width - 18), box.y + box.height / 2);
+      await page.mouse.down();
+      await page.waitForFunction(() => window.__press);
+      const press = await page.evaluate(() => window.__press);
+      assert.ok(press.ms <= 50, `thumb transformed after ${press.ms.toFixed(1)} ms`);
+      // Chrome does not report computed styles of ::-webkit-slider-thumb, so check the rule that ties the thumb's transform to --thumb-s
+      const tied = await page.evaluate(() => [...document.styleSheets].some((sh) => [...sh.cssRules].some((r) => /::-webkit-slider-thumb/.test(r.selectorText || '') && /scale\(var\(--thumb-s\)\)/.test(r.style.transform))));
+      assert.ok(tied, 'the thumb transform reads --thumb-s');
+      assert.equal(await page.$eval(sel, (el) => el.hasAttribute('data-pressed')), true, 'the pressed slider takes the accent');
+      await page.mouse.up();
+      await page.waitForFunction((s) => !document.querySelector(s).hasAttribute('data-pressed'), sel);
+
+      // the timeline scrubber: pointer capture, 1:1 tracking, rubber band past the end, spring back on release
+      await watch('[data-testid="scrubber"]', 'scrubber');
+      await page.locator('[data-testid="scrubber"]').scrollIntoViewIfNeeded();
+      const sb = await page.locator('.wm-track').boundingBox();
+      await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+      await page.mouse.down();
+      await page.waitForFunction(() => window.__press);
+      const sp = await page.evaluate(() => window.__press);
+      assert.ok(sp.ms <= 50, `scrubber thumb transformed after ${sp.ms.toFixed(1)} ms`);
+      const mid = await page.evaluate(() => window.workingModel.time);
+      assert.ok(Math.abs(mid - spec.duration / 2) < spec.duration * 0.02, `pressing the track puts time under the pointer (${mid})`);
+      await page.mouse.move(sb.x + sb.width + 120, sb.y + sb.height / 2, { steps: 4 });
+      assert.equal(await page.evaluate(() => window.workingModel.time), spec.duration, 'past the end the time stays at the end');
+      const thumbPastEnd = () => page.evaluate(() => {
+        const t = document.querySelector('.wm-track').getBoundingClientRect();
+        const th = document.querySelector('.wm-thumb').getBoundingClientRect();
+        return th.left + th.width / 2 - t.right;
+      });
+      const over = await thumbPastEnd();
+      assert.ok(over > 4 && over < 120, `the thumb rubber-bands past the end, by less than the pointer (${over.toFixed(1)} px)`);
+      await page.mouse.up();
+      await page.waitForFunction(() => {
+        const t = document.querySelector('.wm-track').getBoundingClientRect();
+        const th = document.querySelector('.wm-thumb').getBoundingClientRect();
+        return Math.abs(th.left + th.width / 2 - t.right) < 1 && !/scale/.test(document.querySelector('.wm-thumb').style.transform);
+      }, null, { timeout: 3000 });
+      assert.deepEqual(errors, []);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
 describe('dark theme and reduced motion', () => {
   test('dark theme renders with no errors and no autoplay under reduced motion', async () => {
     const spec = JSON.parse(fs.readFileSync(path.join(ROOT, 'examples', 'sir-epidemic.model.json'), 'utf8'));
@@ -308,7 +398,17 @@ describe('dark theme and reduced motion', () => {
       await page.waitForTimeout(900);
       assert.equal(await page.evaluate(() => window.workingModel.time), 0, 'no autoplay with reduced motion');
       const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-      assert.equal(bg, 'rgb(14, 19, 29)');
+      assert.equal(bg, 'rgb(14, 14, 13)', 'the Ink dark background');
+      // reduced motion: a press does not scale the slider thumb
+      const slider = page.locator('input[type="range"][data-param]').first();
+      await slider.scrollIntoViewIfNeeded();
+      const box = await slider.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.waitForTimeout(80);
+      assert.equal(await slider.evaluate((el) => el.hasAttribute('data-pressed')), true, 'the press registered');
+      assert.equal(await slider.evaluate((el) => getComputedStyle(el).getPropertyValue('--thumb-s').trim()), '1', 'but the thumb did not scale');
+      await page.mouse.up();
       await page.evaluate(() => { window.workingModel.setTime(80); window.workingModel.render(); });
       await page.screenshot({ path: path.join(OUT, 'sir-epidemic-dark.png'), fullPage: true });
       assert.deepEqual(errors, []);

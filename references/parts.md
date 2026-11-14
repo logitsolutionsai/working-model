@@ -14,7 +14,7 @@ Every binding is an expression over state, derived values, params and `t`, evalu
 | `visible` | Expression; the part is drawn only while it is true. |
 | `highlight` | Expression; an accent ring is drawn while it is true. |
 | `pulse` | Event or emit name(s); the part flashes briefly when they happen. |
-| `tone` | `ink`, `muted`, `accent`, `ok`, `bad`, `warn`, `soft`, `info`, a `#rrggbb` colour, or an expression returning one, such as `"lastHit ? 'ok' : 'bad'"`. |
+| `tone` | `ink`, `muted`, `accent`, `ok`, `bad`, `warn`, `soft`, `info`, a `#rrggbb` colour, or an expression returning one, such as `"lastHit ? 'ok' : 'bad'"`. The page draws tones in ink, by weight and shape rather than hue: `bad` and `ink` strongest (solid ink), `ok` and `accent` an ink outline, `warn` hatched, `info` and `muted` quiet, `soft` dashed. A `#rrggbb` colour is drawn as body ink. |
 
 ## Types
 
@@ -26,7 +26,7 @@ A framed box with a line of text. Long text wraps onto up to three lines.
 { "id": "server", "type": "box", "at": [9, 0, 3, 2], "label": "Server", "text": "{accepted} served", "pulse": "accept" }
 ```
 
-`tone` adds a coloured bar on the left edge.
+A `tone` expression that turns `bad` draws the frame heavier, as an alarm; a fixed tone does not.
 
 ### `tank`
 
@@ -64,7 +64,7 @@ Cells for bit arrays, cache slots or a population.
 | `cells` | A list of values. Non-zero numbers, `true` and non-empty strings are drawn filled. |
 | `cols` | Cells per row (default: as square as the space allows). |
 | `tones` | Map from a cell value, as text, to a tone. |
-| `mark` | An index or list of indexes to ring in the accent colour. |
+| `mark` | An index or list of indexes to ring with a heavy ink outline. |
 | `showValues` | `false` hides the values (default shows them when cells are large enough). |
 
 ### `counter`
@@ -128,7 +128,7 @@ An arrow between two parts. Particles run along it whenever one of the `on` sign
 | --- | --- |
 | `from`, `to` | Part ids. |
 | `on` | Signal name(s) that send a particle. |
-| `tone` | One tone, or a map from signal name to tone. |
+| `tone` | One tone, or a map from signal name to tone. A particle whose tone is `bad` is drawn as a hollow ring (rejected, dropped); the others are solid ink. |
 | `after` | Another link id: particles start when they reach the end of that link, so a flow reads as one journey. |
 | `via` | Bend points as `[col, row]` grid positions (fractions allowed). |
 | `travel` | Model time a particle takes to cross (default: about 0.7 seconds of playback). |
@@ -149,7 +149,7 @@ A line chart of any expressions over the whole run. The past is drawn solid up t
 
 | Field | Meaning |
 | --- | --- |
-| `series` | Expressions, or `{ expr, label, tone }`. Two or more series get a legend. |
+| `series` | Expressions, or `{ expr, label, tone }`. Two or more series are told apart by dash pattern and named at the end of each line. |
 | `y` | `[min, max]`, numbers or param expressions. Default: fitted to the data, rounded up. |
 | `refs` | Dashed reference lines `{ y, label, tone }`. |
 | `step` | Draw as steps (for counts that jump). |

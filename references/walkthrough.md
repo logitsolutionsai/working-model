@@ -61,7 +61,7 @@ $ working-model check examples/token-bucket.model.json
 
 Two claims are deliberately not restatements of the rules. "Tokens never exceed capacity" would only read back `min(capacity, ...)`, so the invariant is the bucket's real guarantee instead: what gets through is bounded by the burst allowance plus the refill rate. And "rejected only when empty" would only read back the `else` branch, so the claim is about traffic: anything no faster than the refill rate gets through. It breaks at a bucket of one token, because requests snapped to 0.1 s ticks arrive a little unevenly and a one-token bucket has nothing to absorb that with. That is a true lesson about token buckets, not a modelling accident.
 
-The slider report is the reader's experiment list. Drag the burst below the bucket size and "the first 10 requests pass" turns red, because there were never 10 requests. Drag the refill rate down and the bucket is not full again before traffic starts. Each failure is the explanation's honest boundary.
+The slider report is the reader's experiment list. Drag the burst below the bucket size and "the first 10 requests pass" fails, because there were never 10 requests. Drag the refill rate down and the bucket is not full again before traffic starts. Each failure is the explanation's honest boundary.
 
 ## 5. A Weak Claim, and What to Do About It
 

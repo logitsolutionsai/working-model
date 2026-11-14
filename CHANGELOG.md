@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- The page uses the Ink palette: warm neutrals, one accent (`#0065FD`, `#5b9cff` in dark mode) only for what the reader touches or has selected, and status shown by weight and shape instead of red, green and yellow. The header reads "6 of 6 claims hold", with an inverse "1 fails" chip when a claim fails; the tilted stamp is gone.
+- Rejected particles are hollow ink rings and accepted ones solid ink, with no glows or trails; chart series are told apart by dash pattern and named at the line end.
+- Motion uses interruptible springs (`src/page/fluid.js`): press feedback on pointer-down, a chip that materialises when a claim flips, a counterexample well that opens on a height spring, a slider thumb that scales while pressed, and a timeline scrubber with pointer capture, grab offset and a rubber band past both ends. Everything is instant under reduced motion.
+- On narrow screens the play bar is a translucent sticky bar.
+
 ## 0.1.0 (2026-11-14)
 
 First release.

@@ -6,32 +6,29 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: file:;">
 <title>working-model gallery</title>
 <style>
-:root { color-scheme: light; --paper: #f3eee3; --card: #fbf8f1; --ink: #1a2130; --ink-2: #4b5466; --muted: #8c909a; --line: #2a3242; --shadow: rgba(26,33,48,.10); --accent: #2146c7; --ok: #23774a; --bad: #c0352a; --rule: rgba(36,52,92,.075); --rule-strong: rgba(36,52,92,.13);
+:root { color-scheme: light; --bg: #f7f7f5; --surface: #ffffff; --surface-2: #f0f0ed; --line: #e3e3df; --line-strong: #c9c9c3; --ink: #111110; --ink-2: #3a3a37; --muted: #6f6f69; --accent: #0065FD;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace; }
-@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --paper: #0e131d; --card: #121927; --ink: #ebe6da; --ink-2: #aeb4c2; --muted: #747b8a; --line: #c9cbd2; --shadow: rgba(0,0,0,.35); --accent: #8aa9ff; --ok: #63cf91; --bad: #ff7f6b; --rule: rgba(150,175,255,.055); --rule-strong: rgba(150,175,255,.10); } }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --bg: #0e0e0d; --surface: #171716; --surface-2: #1f1f1d; --line: #2b2b29; --line-strong: #3d3d3a; --ink: #f4f4f2; --ink-2: #d6d6d2; --muted: #9a9a94; --accent: #5b9cff; } }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans);
-  background-image: linear-gradient(var(--rule-strong) 1px, transparent 1px), linear-gradient(90deg, var(--rule-strong) 1px, transparent 1px), linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px; }
-main { max-width: 1240px; margin: 0 auto; padding: 36px 32px 48px; }
-.kicker { font: 600 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+main { max-width: 1240px; margin: 0 auto; padding: 40px 32px 48px; }
+.kicker { font: 600 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 h1 { margin: 8px 0 6px; font: 600 clamp(30px, 4vw, 46px)/1.05 var(--serif); }
-.lede { margin: 0 0 28px; max-width: 68ch; color: var(--ink-2); font-size: 16px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; }
-.card { display: flex; flex-direction: column; background: var(--card); border: 1.5px solid var(--line); border-radius: 6px; box-shadow: 5px 5px 0 var(--shadow); color: inherit; text-decoration: none; overflow: hidden; }
-.card:hover { transform: translate(-1px, -1px); box-shadow: 7px 7px 0 var(--shadow); }
-.card:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 3px; }
-.thumb { aspect-ratio: 16 / 9.6; border-bottom: 1.5px solid var(--line); background: var(--paper); overflow: hidden; }
+.lede { margin: 0 0 32px; max-width: 68ch; color: var(--ink-2); font-size: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+.card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: inherit; text-decoration: none; overflow: hidden; transition: border-color .15s; }
+.card:hover { border-color: var(--line-strong); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.thumb { aspect-ratio: 16 / 9.6; border-bottom: 1px solid var(--line); background: var(--bg); overflow: hidden; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
-.body { padding: 14px 16px 16px; display: grid; gap: 8px; }
+.body { padding: 16px; display: grid; gap: 8px; }
 .card h2 { margin: 0; font: 600 21px/1.2 var(--serif); }
 .card p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
-.stamp { justify-self: start; font: 700 11.5px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ok); border: 1.5px solid var(--ok); border-radius: 6px; padding: 5px 8px; }
-.stamp.fail { color: var(--bad); border-color: var(--bad); }
-.stamps { display: flex; flex-wrap: wrap; gap: 6px; }
-.stamp.mut { color: var(--ink-2); border-color: var(--rule-strong); }
+.chip { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font: 600 11.5px/1 var(--mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; background: var(--surface-2); color: var(--muted); }
+.chip.fail { background: var(--ink); color: var(--bg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; }
-.tags span { font: 600 10.5px/1.6 var(--mono); letter-spacing: .04em; color: var(--muted); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 0 6px; }
+.tags span { font: 600 10.5px/1.6 var(--mono); letter-spacing: .04em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }
 footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 520px) { main { padding: 24px 16px 36px; } .grid { grid-template-columns: 1fr; } }
 </style>
@@ -40,14 +37,14 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <main>
 <div class="kicker">working-model</div>
 <h1>Gallery</h1>
-<p class="lede">Each page is a working model: an animation you can scrub and steer, with claims that are re-checked by simulation as you move the sliders. Open one, drag a slider until a claim turns red, and see where the explanation stops holding.</p>
+<p class="lede">Each page is a working model: an animation you can scrub and steer, with claims that are re-checked by simulation as you move the sliders. Open one, drag a slider until a claim fails, and see where the explanation stops holding.</p>
 <div class="grid">
 <a class="card" href="token-bucket.html">
 <div class="thumb"><img src="thumbs/token-bucket.png" alt="Diagram of Token Bucket Rate Limiter" loading="lazy"></div>
 <div class="body">
 <h2>Token Bucket Rate Limiter</h2>
 <p>A bucket holds up to 10 tokens and refills at 2 per second. Each request spends one token; a request that finds less than one token is rejected. Bursts pass up to the bucket size, and sustained traffic is held to the refill rate.</p>
-<div class="stamps"><span class="stamp">6/6 claims pass</span><span class="stamp mut" data-mutation-score="94" title="Share of deliberate bugs in the rules that some claim catches">mutation score 94%</span></div>
+<div class="chips"><span class="chip" data-passed="6" data-total="6">6 of 6 claims hold</span><span class="chip mut" data-mutation-score="94" title="Share of deliberate bugs in the rules that some claim catches">mutation score 94%</span></div>
 <div class="tags"><span>at</span><span>always</span><span>sweep</span><span>eventually</span><span>box</span><span>tank</span><span>chart</span></div>
 </div>
 </a>
@@ -56,7 +53,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Exponential Backoff With and Without Jitter</h2>
 <p>20 clients lose their server at the same moment. Each retries after a wait that doubles every failure, capped at 2 seconds. With jitter, each wait is a random share of that limit, which breaks up the herd of synchronized retries.</p>
-<div class="stamps"><span class="stamp">5/5 claims pass</span><span class="stamp mut" data-mutation-score="62" title="Share of deliberate bugs in the rules that some claim catches">mutation score 62%</span></div>
+<div class="chips"><span class="chip" data-passed="5" data-total="5">5 of 5 claims hold</span><span class="chip mut" data-mutation-score="62" title="Share of deliberate bugs in the rules that some claim catches">mutation score 62%</span></div>
 <div class="tags"><span>compare</span><span>always</span><span>eventually</span><span>grid</span><span>lamp</span><span>counter</span><span>chart</span></div>
 </div>
 </a>
@@ -65,7 +62,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>LRU Cache</h2>
 <p>A cache with 4 slots keeps the most recently used keys and evicts the least recently used one when it is full. A program loops over 3 hot keys, then a one-time scan of 5 new keys passes through.</p>
-<div class="stamps"><span class="stamp">6/6 claims pass</span><span class="stamp mut" data-mutation-score="100" title="Share of deliberate bugs in the rules that some claim catches">mutation score 100%</span></div>
+<div class="chips"><span class="chip" data-passed="6" data-total="6">6 of 6 claims hold</span><span class="chip mut" data-mutation-score="100" title="Share of deliberate bugs in the rules that some claim catches">mutation score 100%</span></div>
 <div class="tags"><span>at</span><span>sweep</span><span>compare</span><span>always</span><span>box</span><span>queue</span><span>grid</span><span>gauge</span><span>chart</span></div>
 </div>
 </a>
@@ -74,7 +71,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>TCP AIMD: Two Flows Find a Fair Share</h2>
 <p>Two TCP senders share one bottleneck that carries 40 packets per round trip. Each round trip both add one packet to their window (additive increase); when together they overflow the link, both cut their window to 50% of its size (multiplicative decrease). Model assumptions: no buffer, and a loss hits both flows at once.</p>
-<div class="stamps"><span class="stamp">3/3 claims pass</span><span class="stamp mut" data-mutation-score="82" title="Share of deliberate bugs in the rules that some claim catches">mutation score 82%</span></div>
+<div class="chips"><span class="chip" data-passed="3" data-total="3">3 of 3 claims hold</span><span class="chip mut" data-mutation-score="82" title="Share of deliberate bugs in the rules that some claim catches">mutation score 82%</span></div>
 <div class="tags"><span>eventually</span><span>sweep</span><span>at</span><span>box</span><span>tank</span><span>lamp</span><span>gauge</span><span>chart</span></div>
 </div>
 </a>
@@ -83,7 +80,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Circuit Breaker</h2>
 <p>A client calls a service five times a second through a circuit breaker. At first every other call fails, but never two in a row. After 5 failures in a row the breaker opens and fails calls at once, without touching the service. After a cooldown of 4 seconds it lets one trial call through (half-open): success closes it, failure opens it again. This breaker counts failures in a row, not the failure rate, so scattered failures never trip it; many libraries count failures over a time window instead.</p>
-<div class="stamps"><span class="stamp">5/5 claims pass</span><span class="stamp mut" data-mutation-score="92" title="Share of deliberate bugs in the rules that some claim catches">mutation score 92%</span></div>
+<div class="chips"><span class="chip" data-passed="5" data-total="5">5 of 5 claims hold</span><span class="chip mut" data-mutation-score="92" title="Share of deliberate bugs in the rules that some claim catches">mutation score 92%</span></div>
 <div class="tags"><span>at</span><span>eventually</span><span>whenever</span><span>box</span><span>node</span><span>lamp</span><span>counter</span><span>chart</span></div>
 </div>
 </a>
@@ -92,7 +89,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>SIR Epidemic and Herd Immunity</h2>
 <p>A town of ten thousand people, with 40% vaccinated. Each infected person passes the infection on at a rate that makes R0 = 2.5 new cases in a fully susceptible town, and stays infectious for about 7 days. Model assumptions: everyone mixes evenly, recovery gives lasting immunity, the town is closed, and the hospital line is compared with everyone infected at once, as if each case needed a bed.</p>
-<div class="stamps"><span class="stamp">5/5 claims pass</span><span class="stamp mut" data-mutation-score="86" title="Share of deliberate bugs in the rules that some claim catches">mutation score 86%</span></div>
+<div class="chips"><span class="chip" data-passed="5" data-total="5">5 of 5 claims hold</span><span class="chip mut" data-mutation-score="86" title="Share of deliberate bugs in the rules that some claim catches">mutation score 86%</span></div>
 <div class="tags"><span>sweep</span><span>whenever</span><span>always</span><span>at</span><span>grid</span><span>gauge</span><span>counter</span><span>chart</span></div>
 </div>
 </a>
@@ -101,7 +98,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Round Robin vs Least Connections</h2>
 <p>A load balancer spreads random requests over three servers, and one of them works at only 40% of the speed of the others. Round robin takes turns no matter how busy each server is; least connections sends each request to the server with the fewest jobs. Requests arrive at random, about 2.5 per second, for fifty seconds.</p>
-<div class="stamps"><span class="stamp">6/6 claims pass</span><span class="stamp mut" data-mutation-score="92" title="Share of deliberate bugs in the rules that some claim catches">mutation score 92%</span></div>
+<div class="chips"><span class="chip" data-passed="6" data-total="6">6 of 6 claims hold</span><span class="chip mut" data-mutation-score="92" title="Share of deliberate bugs in the rules that some claim catches">mutation score 92%</span></div>
 <div class="tags"><span>compare</span><span>always</span><span>at</span><span>sweep</span><span>node</span><span>stack</span><span>counter</span><span>chart</span></div>
 </div>
 </a>
@@ -110,7 +107,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Compound vs Simple Interest</h2>
 <p>Two accounts start with the same deposit and earn 7% a year, paid once a year. Simple interest pays only on the original deposit; compound interest also pays on the interest already earned, so its payments keep growing.</p>
-<div class="stamps"><span class="stamp">5/5 claims pass</span><span class="stamp mut" data-mutation-score="94" title="Share of deliberate bugs in the rules that some claim catches">mutation score 94%</span></div>
+<div class="chips"><span class="chip" data-passed="5" data-total="5">5 of 5 claims hold</span><span class="chip mut" data-mutation-score="94" title="Share of deliberate bugs in the rules that some claim catches">mutation score 94%</span></div>
 <div class="tags"><span>always</span><span>at</span><span>whenever</span><span>group</span><span>tank</span><span>counter</span><span>lamp</span><span>chart</span></div>
 </div>
 </a>
@@ -119,7 +116,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Bloom Filter False Positives</h2>
 <p>A Bloom filter stores 12 items in 64 bits. Adding an item sets 3 bits chosen by hash functions; checking an item looks at the same bits. If any is clear, the item was never added. If all are set, it was probably added, but those bits may have been set by other items: a false positive.</p>
-<div class="stamps"><span class="stamp">4/4 claims pass</span><span class="stamp mut" data-mutation-score="76" title="Share of deliberate bugs in the rules that some claim catches">mutation score 76%</span></div>
+<div class="chips"><span class="chip" data-passed="4" data-total="4">4 of 4 claims hold</span><span class="chip mut" data-mutation-score="76" title="Share of deliberate bugs in the rules that some claim catches">mutation score 76%</span></div>
 <div class="tags"><span>at</span><span>always</span><span>compare</span><span>box</span><span>lamp</span><span>grid</span><span>counter</span><span>gauge</span><span>chart</span></div>
 </div>
 </a>
@@ -128,7 +125,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Raft Leader Election</h2>
 <p>Five servers. A follower that hears nothing from a leader for its election timeout, a random time between 150 and 300 ms, becomes a candidate and asks the others for votes; a majority makes it leader. Messages take 10 ms. At t = 1 s the leader crashes. Log replication is left out.</p>
-<div class="stamps"><span class="stamp">5/5 claims pass</span><span class="stamp mut" data-mutation-score="70" title="Share of deliberate bugs in the rules that some claim catches">mutation score 70%</span></div>
+<div class="chips"><span class="chip" data-passed="5" data-total="5">5 of 5 claims hold</span><span class="chip mut" data-mutation-score="70" title="Share of deliberate bugs in the rules that some claim catches">mutation score 70%</span></div>
 <div class="tags"><span>never</span><span>eventually</span><span>whenever</span><span>compare</span><span>node</span><span>counter</span><span>grid</span><span>chart</span></div>
 </div>
 </a>
@@ -137,7 +134,7 @@ footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); }
 <div class="body">
 <h2>Inventory Reorder Point</h2>
 <p>A shop sells 10 units a day. When stock on hand plus stock on order falls to the reorder point of 50 units, it orders 100 more, which arrive 4 days later. Sales that find the shelf empty are lost.</p>
-<div class="stamps"><span class="stamp">3/3 claims pass</span><span class="stamp mut" data-mutation-score="92" title="Share of deliberate bugs in the rules that some claim catches">mutation score 92%</span></div>
+<div class="chips"><span class="chip" data-passed="3" data-total="3">3 of 3 claims hold</span><span class="chip mut" data-mutation-score="92" title="Share of deliberate bugs in the rules that some claim catches">mutation score 92%</span></div>
 <div class="tags"><span>never</span><span>sweep</span><span>at</span><span>tank</span><span>box</span><span>counter</span><span>chart</span></div>
 </div>
 </a>
